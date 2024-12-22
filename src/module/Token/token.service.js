@@ -62,6 +62,8 @@ let TokenService = class TokenService {
                 selectedFields += ' ' + fields.join(' ');
             }
             const query = {};
+            if (!query.$or)
+                query.$or = [];
             if (sid)
                 query.$or.push({ sid: sid });
             if (accountId)
@@ -74,7 +76,7 @@ let TokenService = class TokenService {
             return this.tokenModel.findOne(query).select(selectedFields).sort({ createAt: 1 }).exec();
         }
         catch (error) {
-            console.error('handleGetToken: ', error.message);
+            console.error('handleGetTokenbyFields: ', error.message);
             throw new common_1.InternalServerErrorException('Error finding user');
         }
     }
@@ -287,10 +289,10 @@ let TokenService = class TokenService {
             };
         }
         catch (error) {
-            if (error instanceof common_1.NotFoundException)
+            if (error instanceof common_1.NotFoundException || error instanceof common_1.BadRequestException || error instanceof common_1.UnauthorizedException)
                 throw error;
-            console.error('handlePostGetTokenByAuthorizationCodeGrant: ', error.message);
-            throw new common_1.InternalServerErrorException('Error updating tokens');
+            console.error('handleGetAccessTokenByAuthorizationCodeGrant: ', error.message);
+            throw new common_1.InternalServerErrorException('Error get token');
         }
     }
     async handleGetAccessTokenByRefreshTokenGrant(clientId, clientSecret, refreshToken, redirectUri) {
@@ -316,7 +318,7 @@ let TokenService = class TokenService {
             };
         }
         catch (error) {
-            if (error instanceof common_1.NotFoundException)
+            if (error instanceof common_1.NotFoundException || error instanceof common_1.BadRequestException || error instanceof common_1.UnauthorizedException)
                 throw error;
             console.error('handleGetNewAccessTokenOfClient: ', error.message);
             throw new common_1.InternalServerErrorException('Error updating tokens');
