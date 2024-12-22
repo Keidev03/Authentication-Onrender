@@ -52,14 +52,12 @@ let AuthController = class AuthController {
         if (!aisStr)
             throw new common_1.BadRequestException('AIS cookie is missing. Please log in again.');
         const { data, newAIS } = await this.authService.handleGetAccountsSID(sidStr, aisStr);
-        newAIS && response.cookie('AIS', newAIS, { maxAge: common_2.constants.EXPIRED_SID * 1000, httpOnly: true, secure: false, sameSite: 'none', path: '/' });
+        newAIS && response.cookie('AIS', newAIS, { maxAge: common_2.constants.EXPIRED_SID * 1000, path: '/' });
         return response.json(data);
     }
     async removeAccountSIDClient(accountId, sidStr, aisStr, response) {
         const { newAccounts, newAisStr } = await this.authService.handleRemoveAccountSessionClient(accountId, sidStr, aisStr);
-        newAccounts.length > 0
-            ? response.cookie('AIS', newAisStr, { maxAge: 2 * 365 * 24 * 60 * 60 * 1000, httpOnly: true, secure: false, sameSite: 'none', path: '/' })
-            : response.clearCookie('AIS', { path: '/' });
+        newAccounts.length > 0 ? response.cookie('AIS', newAisStr, { maxAge: 2 * 365 * 24 * 60 * 60 * 1000, httpOnly: true, path: '/' }) : response.clearCookie('AIS', { path: '/' });
         return response.sendStatus(204);
     }
     async postOAuth2SigninSession(query, body, sidStr) {
@@ -71,8 +69,8 @@ let AuthController = class AuthController {
         if (!TLDecrypt || useragent.browser !== TLDecrypt.browser || useragent.device !== TLDecrypt.device || useragent.os !== TLDecrypt.os || useragent.ip !== TLDecrypt.ip)
             throw new common_1.BadRequestException('Detected');
         const { newSID, newAIS } = await this.authService.handleSigninWithPassword(TLDecrypt.accountId, body.password, TLDecrypt.os, TLDecrypt.device, TLDecrypt.browser, TLDecrypt.ip, sidStr, aisStr);
-        response.cookie('SID', newSID, { maxAge: common_2.constants.EXPIRED_SID * 1000, httpOnly: true, secure: false, sameSite: 'none', path: '/' });
-        response.cookie('AIS', newAIS, { maxAge: common_2.constants.EXPIRED_SID * 1000, httpOnly: true, secure: false, sameSite: 'none', path: '/' });
+        response.cookie('SID', newSID, { maxAge: common_2.constants.EXPIRED_SID * 1000, httpOnly: true, path: '/' });
+        response.cookie('AIS', newAIS, { maxAge: common_2.constants.EXPIRED_SID * 1000, httpOnly: true, path: '/' });
         return response.json({ uri: query.continue });
     }
     async getSignoutOfAllAccounts(sidStr, response) {

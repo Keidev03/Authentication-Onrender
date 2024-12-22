@@ -10,6 +10,7 @@ const common_2 = require("./common");
 const app_module_1 = require("./app.module");
 async function Bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
+    app.set('trust proxy', true);
     app.use((req, res, next) => {
         const forwardedFor = req.headers['x-forwarded-for'];
         req['clientIP'] = req.ip || (Array.isArray(forwardedFor) ? forwardedFor[0] : forwardedFor) || req.connection.remoteAddress;
@@ -35,7 +36,7 @@ async function Bootstrap() {
         },
         credentials: true,
     });
-    app.useStaticAssets(path.join((0, process_1.cwd)(), 'template'), {
+    app.useStaticAssets(path.join((0, process_1.cwd)(), configService.get('TEMPLATE_DIRECTORY')), {
         prefix: '/',
     });
     const port = configService.get('SERVER_PORT') || 3000;

@@ -55,8 +55,8 @@ let OAuth2Controller = class OAuth2Controller {
         if (!TLDecrypt || useragent.browser !== TLDecrypt.browser || useragent.device !== TLDecrypt.device || useragent.os !== TLDecrypt.os || useragent.ip !== TLDecrypt.ip)
             throw new common_1.BadRequestException('Detected');
         const data = await this.oauth2Service.handleSigninWithPassword(TLDecrypt.accountId, body.password, query.client_id, query.redirect_uri, query.response_type, query.scope, query.access_type, query.prompt, query.nonce, query.state, TLDecrypt.os, TLDecrypt.device, TLDecrypt.browser, TLDecrypt.ip, sidStr, aisStr);
-        response.cookie('SID', data.newSID, { maxAge: common_2.constants.EXPIRED_SID * 1000, httpOnly: true, secure: false, sameSite: 'none', path: '/' });
-        response.cookie('AIS', data.newAIS, { maxAge: common_2.constants.EXPIRED_SID * 1000, httpOnly: true, secure: false, sameSite: 'none', path: '/' });
+        response.cookie('SID', data.newSID, { maxAge: common_2.constants.EXPIRED_SID * 1000, httpOnly: true, path: '/' });
+        response.cookie('AIS', data.newAIS, { maxAge: common_2.constants.EXPIRED_SID * 1000, httpOnly: true, path: '/' });
         const payload = {
             uri: data.redirect_uri,
             clientName: data.client_name,

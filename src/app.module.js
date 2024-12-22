@@ -27,7 +27,11 @@ exports.AppModule = AppModule;
 exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
         imports: [
-            config_1.ConfigModule.forRoot({ isGlobal: true, load: [() => require(path.resolve(process.cwd(), 'keys.json'))] }),
+            config_1.ConfigModule.forRoot({
+                isGlobal: true,
+                envFilePath: ['.env.developer'],
+                load: [() => require(path.resolve(process.cwd(), 'keys.json'))],
+            }),
             mongoose_1.MongooseModule.forRootAsync({
                 imports: [config_1.ConfigModule],
                 inject: [config_1.ConfigService],

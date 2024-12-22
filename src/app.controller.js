@@ -14,9 +14,13 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AppController = void 0;
 const common_1 = require("@nestjs/common");
+const config_1 = require("@nestjs/config");
 let AppController = class AppController {
+    constructor(configService) {
+        this.configService = configService;
+    }
     serveFrontend(res) {
-        res.sendFile('index.html', { root: 'template' });
+        res.sendFile('index.html', { root: this.configService.get('TEMPLATE_DIRECTORY') });
     }
 };
 exports.AppController = AppController;
@@ -28,6 +32,7 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], AppController.prototype, "serveFrontend", null);
 exports.AppController = AppController = __decorate([
-    (0, common_1.Controller)()
+    (0, common_1.Controller)(),
+    __metadata("design:paramtypes", [config_1.ConfigService])
 ], AppController);
 //# sourceMappingURL=app.controller.js.map
