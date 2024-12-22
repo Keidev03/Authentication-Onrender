@@ -31,8 +31,7 @@ __decorate([
     (0, mongoose_1.Prop)({
         type: mongoose_2.Types.ObjectId,
         index: true,
-        required: false,
-        default: undefined,
+        required: true,
         ref: client_schema_1.Client.name,
     }),
     __metadata("design:type", mongoose_2.Types.ObjectId)

@@ -16,15 +16,15 @@ export declare class TokenService {
     private readonly cacheManager;
     constructor(tokenModel: Model<TokenDocument>, userService: UserService, clientService: ClientService, sessionService: SessionService, cryptoService: CryptoService, jwtService: JwtService, cacheManager: Cache);
     handleCreateToken(sid: string, clientId: Types.ObjectId, accountId: Types.ObjectId, scope: EScope[], expireafterSeconds: number, transaction?: ClientSession): Promise<TokenDocument>;
-    handleGetTokenbyFields(sid: string | undefined, accountId: Types.ObjectId | undefined, clientId: Types.ObjectId | undefined, fields?: Array<TokenFields>): Promise<TokenDocument>;
+    handleGetTokenByFields(sid: string, accountId: Types.ObjectId, clientId: Types.ObjectId, fields?: Array<TokenFields>): Promise<TokenDocument>;
     handleGetAllTokens(limit: number, lastId: Types.ObjectId | undefined, fields?: Array<TokenFields>): Promise<{
         tokens: TokenDocument[];
         totalRecords: number;
     }>;
     handleGetToken(_id: string, fields?: Array<TokenFields>): Promise<TokenDocument | null>;
-    handleDeleteTokenByFields(sid: string | undefined, accountId: Types.ObjectId | undefined, clientId: Types.ObjectId | undefined): Promise<void>;
+    handleDeleteTokenByFields(sid: string, accountId: Types.ObjectId, clientId: Types.ObjectId): Promise<void>;
     handleDeleteToken(_id: string): Promise<void>;
-    handleDeleteAllTokensByFields(sid: string | undefined, accountId: Types.ObjectId | undefined, clientId: Types.ObjectId | undefined): Promise<void>;
+    handleDeleteAllTokensByFields(sid: string, accountId: Types.ObjectId, clientId: Types.ObjectId): Promise<void>;
     handleDeleteAllTokensInClient(clientId: Types.ObjectId): Promise<void>;
     handleDeleteAllTokensInAccountId(accountId: Types.ObjectId): Promise<void>;
     handleUpdateScopeInToken(_id: string, scope: EScope[], transaction?: ClientSession): Promise<boolean>;

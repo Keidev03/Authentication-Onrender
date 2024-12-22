@@ -52,7 +52,7 @@ let TokenService = class TokenService {
             throw new common_1.InternalServerErrorException('Error creating token');
         }
     }
-    async handleGetTokenbyFields(sid, accountId, clientId, fields) {
+    async handleGetTokenByFields(sid, accountId, clientId, fields) {
         try {
             let selectedFields = '-_id';
             if (Array.isArray(fields) && fields.includes('_id')) {
@@ -61,19 +61,8 @@ let TokenService = class TokenService {
             else {
                 selectedFields += ' ' + fields.join(' ');
             }
-            const query = {};
-            if (!query.$or)
-                query.$or = [];
-            if (sid)
-                query.$or.push({ sid: sid });
-            if (accountId)
-                query.$or.push({ accountId: accountId });
-            if (clientId !== undefined) {
-                query.$or.push({
-                    $or: [{ clientId: clientId }, { clientId: { $exists: false } }],
-                });
-            }
-            return this.tokenModel.findOne(query).select(selectedFields).sort({ createAt: 1 }).exec();
+            const data = await this.tokenModel.findOne({ sid, accountId, clientId }).select(selectedFields).sort({ createAt: 1 }).exec();
+            return data;
         }
         catch (error) {
             console.error('handleGetTokenbyFields: ', error.message);
@@ -121,17 +110,7 @@ let TokenService = class TokenService {
     }
     async handleDeleteTokenByFields(sid, accountId, clientId) {
         try {
-            const query = { $or: [] };
-            if (sid)
-                query.$or.push({ sid: sid });
-            if (accountId)
-                query.$or.push({ accountId: accountId });
-            if (clientId !== undefined) {
-                query.$or.push({
-                    $or: [{ clientId: clientId }, { clientId: { $exists: false } }],
-                });
-            }
-            const deletedToken = await this.tokenModel.deleteOne(query).exec();
+            const deletedToken = await this.tokenModel.deleteOne({ sid, accountId, clientId }).exec();
             if (!deletedToken.acknowledged)
                 throw new common_1.NotFoundException('Token not found or could not be deleted');
         }
@@ -153,17 +132,7 @@ let TokenService = class TokenService {
     }
     async handleDeleteAllTokensByFields(sid, accountId, clientId) {
         try {
-            const query = { $or: [] };
-            if (sid)
-                query.$or.push({ sid: sid });
-            if (accountId)
-                query.$or.push({ accountId: accountId });
-            if (clientId !== undefined) {
-                query.$or.push({
-                    $or: [{ clientId: clientId }, { clientId: { $exists: false } }],
-                });
-            }
-            const deletedToken = await this.tokenModel.deleteMany(query).exec();
+            const deletedToken = await this.tokenModel.deleteMany({ sid, accountId, clientId }).exec();
             if (!deletedToken.acknowledged)
                 throw new common_1.NotFoundException('Token not found or could not be deleted');
         }
@@ -263,7 +232,7 @@ let TokenService = class TokenService {
             if (!dataStr)
                 throw new common_1.NotFoundException('Code does not exist.');
             const { sid, accountId, scope, accessType, nonce } = JSON.parse(dataStr);
-            const token = accessType ? await this.handleGetTokenbyFields(sid, accountId, clientId, ['_id', 'scope']) : undefined;
+            const token = accessType ? await this.handleGetTokenByFields(sid, accountId, clientId, ['_id', 'scope']) : undefined;
             const session = await this.sessionService.handleGetSession(sid, ['_id']);
             if (!session)
                 throw new common_1.NotFoundException('Session not found');

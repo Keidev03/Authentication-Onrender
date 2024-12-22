@@ -70,7 +70,7 @@ let OAuth2Service = class OAuth2Service {
                     error_description: `One or more of the requested scopes are invalid, unknown, or not authorized. Requested scopes: <${scope.join(', ')}>`,
                 });
             }
-            const token = accessType ? await this.tokenService.handleGetTokenbyFields(sidStr, user._id, clientId, ['_id', 'scope', 'expiredAt']) : null;
+            const token = sidStr && accessType ? await this.tokenService.handleGetTokenByFields(sidStr, user._id, client._id, ['_id', 'scope', 'expiredAt']) : null;
             const consent = token && token.scope && scope.length === token.scope.length
                 ? (() => {
                     const sortedScope = [...scope].sort();
@@ -154,7 +154,7 @@ let OAuth2Service = class OAuth2Service {
                 ? await this.sessionService.handleUpdateSessionOrCreateNew(sidStr, user._id, os, device, browser, ip, transaction)
                 : await this.sessionService.handleCreateSession(os, device, browser, ip, user._id, contants_1.constants.EXPIRED_SID, transaction);
             const aisEncrypted = this.cryptoService.encodeAIS(accounts);
-            const token = accessType ? await this.tokenService.handleGetTokenbyFields(sidStr, user._id, clientId, ['_id', 'scope', 'expiredAt']) : null;
+            const token = sidStr && accessType ? await this.tokenService.handleGetTokenByFields(sidStr, user._id, client._id, ['_id', 'scope', 'expiredAt']) : null;
             const consent = token && token.scope && scope.length === token.scope.length
                 ? (() => {
                     const sortedScope = [...scope].sort();
