@@ -12,6 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.SessionSchema = exports.Session = void 0;
 const mongoose_1 = require("@nestjs/mongoose");
 const mongoose_2 = require("mongoose");
+const account_schema_1 = require("../Account/account.schema");
 let Session = class Session {
 };
 exports.Session = Session;
@@ -37,19 +38,25 @@ __decorate([
 ], Session.prototype, "ip", void 0);
 __decorate([
     (0, mongoose_1.Prop)({
-        type: [mongoose_2.Types.ObjectId],
+        type: [
+            {
+                _id: { type: mongoose_2.Types.ObjectId, ref: account_schema_1.Account.name, required: true },
+                primary: { type: Boolean },
+                signedOut: { type: Boolean, default: false },
+            },
+        ],
         index: true,
         validate: {
             validator: function (value) {
-                return value.length <= 10;
+                return value.length <= 2;
             },
-            message: 'accountId array cannot have more than 10 elements.',
+            message: 'linkedAccountIds array cannot have more than 10 elements.',
         },
     }),
     __metadata("design:type", Array)
-], Session.prototype, "accountId", void 0);
+], Session.prototype, "linkedAccountIds", void 0);
 __decorate([
-    (0, mongoose_1.Prop)({ type: Date, index: { expires: '0' } }),
+    (0, mongoose_1.Prop)({ type: Date, index: { expires: '30d' } }),
     __metadata("design:type", Date)
 ], Session.prototype, "expiredAt", void 0);
 exports.Session = Session = __decorate([

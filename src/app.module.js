@@ -13,7 +13,7 @@ const mongoose_1 = require("@nestjs/mongoose");
 const config_1 = require("@nestjs/config");
 const jwt_1 = require("@nestjs/jwt");
 const cache_manager_1 = require("@nestjs/cache-manager");
-const user_module_1 = require("./module/User/user.module");
+const account_module_1 = require("./module/Account/account.module");
 const client_module_1 = require("./module/Client/client.module");
 const oauth2_module_1 = require("./module/OAuth2/oauth2.module");
 const session_module_1 = require("./module/Session/session.module");
@@ -88,7 +88,7 @@ exports.AppModule = AppModule = __decorate([
             auth_module_1.AuthModule,
             oauth2_module_1.OAuth2Module,
             client_module_1.ClientModule,
-            user_module_1.UserModule,
+            account_module_1.AccountModule,
             session_module_1.SessionModule,
         ],
         controllers: [app_controller_1.AppController],

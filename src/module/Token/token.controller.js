@@ -28,10 +28,10 @@ let TokenController = class TokenController {
         return data;
     }
     async getAllTokens() {
-        return this.tokenService.handleGetAllTokens(100, undefined, ['_id', 'sid', 'accountId', 'clientId', 'scope', 'expiredAt']);
+        return this.tokenService.handleFindTokens(100, undefined, ['_id', 'sid', 'accountId', 'clientId', 'scope', 'expiredAt']);
     }
     async getToken(id) {
-        return this.tokenService.handleGetToken(id, ['_id', 'sid', 'accountId', 'clientId', 'scope', 'expiredAt']);
+        return this.tokenService.handleFindOneToken(id, ['_id', 'sid', 'accountId', 'clientId', 'scope', 'expiredAt']);
     }
     async deleteToken(id) {
         return this.tokenService.handleDeleteToken(id);

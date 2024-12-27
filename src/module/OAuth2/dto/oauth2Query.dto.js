@@ -20,12 +20,12 @@ exports.DOAuth2Query = DOAuth2Query;
 __decorate([
     (0, class_validator_1.IsMongoId)({ message: 'The "client_id" parameter is required and must be a valid MongoDB ObjectId' }),
     __metadata("design:type", mongoose_1.Types.ObjectId)
-], DOAuth2Query.prototype, "client_id", void 0);
+], DOAuth2Query.prototype, "clientId", void 0);
 __decorate([
     (0, class_validator_1.IsString)({ message: 'The "redirect_uri" parameter is required and must be a valid string' }),
     (0, class_validator_1.IsUrl)({ require_tld: false }, { message: 'The "redirect_uri" parameter must be a valid URL' }),
     __metadata("design:type", String)
-], DOAuth2Query.prototype, "redirect_uri", void 0);
+], DOAuth2Query.prototype, "redirectUri", void 0);
 __decorate([
     (0, class_transformer_1.Transform)(({ value }) => {
         const responseTypes = value
@@ -44,7 +44,7 @@ __decorate([
     (0, class_validator_1.ArrayNotEmpty)({ message: 'The "response_type" parameter cannot be empty' }),
     (0, class_validator_1.IsEnum)(common_1.EResponseType, { each: true, message: 'Each value in "response_type" must be a valid EResponseType' }),
     __metadata("design:type", Array)
-], DOAuth2Query.prototype, "response_type", void 0);
+], DOAuth2Query.prototype, "responseType", void 0);
 __decorate([
     (0, class_transformer_1.Transform)(({ value }) => {
         const scopes = value
@@ -67,7 +67,7 @@ __decorate([
 __decorate([
     (0, class_validator_1.IsEnum)(common_1.EResponseMode, { message: 'The "response_mode" parameter is required and must be a valid EResponseMode' }),
     __metadata("design:type", String)
-], DOAuth2Query.prototype, "response_mode", void 0);
+], DOAuth2Query.prototype, "responseMode", void 0);
 __decorate([
     (0, class_validator_1.IsString)({ message: 'The "prompt" parameter is required and must be a valid string' }),
     (0, class_validator_1.IsEnum)(common_1.EPrompt, { message: 'The "prompt" parameter must be a valid EPrompt' }),
@@ -81,7 +81,7 @@ __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsEnum)(common_1.EAccessType, { message: 'The "access_type" parameter must be a valid EAccessType, if provided' }),
     __metadata("design:type", String)
-], DOAuth2Query.prototype, "access_type", void 0);
+], DOAuth2Query.prototype, "accessType", void 0);
 __decorate([
     (0, class_validator_1.IsString)({ message: 'The "nonce" parameter is required and must be a valid string' }),
     (0, class_validator_1.IsOptional)(),

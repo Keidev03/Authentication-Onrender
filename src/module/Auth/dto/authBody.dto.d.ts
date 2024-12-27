@@ -1,6 +1,5 @@
-import { Types } from 'mongoose';
 export declare class DAuthBodySession {
-    sub: Types.ObjectId;
+    authuser: number;
 }
 export declare class DAuthBodyPassword {
     TL: string;

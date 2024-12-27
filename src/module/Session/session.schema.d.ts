@@ -29,7 +29,11 @@ export declare class Session {
     device: string;
     browser: string;
     ip: string;
-    accountId: Types.ObjectId[];
+    linkedAccountIds: {
+        _id: Types.ObjectId;
+        primary: boolean;
+        signedOut: boolean;
+    }[];
     expiredAt: Date;
 }
 export type SessionDocument = HydratedDocument<Session> & {

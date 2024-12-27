@@ -30,7 +30,7 @@ export declare class Client {
     active: boolean;
     owner: Types.ObjectId;
     editor: Types.ObjectId[];
-    scope: EScope[];
+    scopes: EScope[];
     picture: string;
     redirectUris: string[];
     privacyPolicy: string;

@@ -11,15 +11,14 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DOAuth2BodyPassword = exports.DOAuth2BodySession = void 0;
 const class_validator_1 = require("class-validator");
-const mongoose_1 = require("mongoose");
 class DOAuth2BodySession {
 }
 exports.DOAuth2BodySession = DOAuth2BodySession;
 __decorate([
-    (0, class_validator_1.IsMongoId)(),
+    (0, class_validator_1.IsNumber)(),
     (0, class_validator_1.IsNotEmpty)(),
-    __metadata("design:type", mongoose_1.Types.ObjectId)
-], DOAuth2BodySession.prototype, "sub", void 0);
+    __metadata("design:type", Number)
+], DOAuth2BodySession.prototype, "authuser", void 0);
 class DOAuth2BodyPassword {
 }
 exports.DOAuth2BodyPassword = DOAuth2BodyPassword;

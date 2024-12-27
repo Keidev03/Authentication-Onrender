@@ -1,13 +1,13 @@
 import { Types } from 'mongoose';
 import { EAccessType, EPrompt, EResponseMode, EResponseType, EScope } from '../../../common';
 export declare class DOAuth2Query {
-    client_id: Types.ObjectId;
-    redirect_uri: string;
-    response_type: EResponseType[];
+    clientId: Types.ObjectId;
+    redirectUri: string;
+    responseType: EResponseType[];
     scope: EScope[];
-    response_mode: EResponseMode;
+    responseMode: EResponseMode;
     prompt: EPrompt;
     state: string;
-    access_type: EAccessType;
+    accessType: EAccessType;
     nonce: string;
 }

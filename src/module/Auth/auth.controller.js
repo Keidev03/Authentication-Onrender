@@ -14,23 +14,22 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthController = void 0;
 const common_1 = require("@nestjs/common");
-const common_2 = require("../../common");
-const auth_service_1 = require("./auth.service");
-const user_service_1 = require("../User/user.service");
-const dto_1 = require("./dto");
-const mongoose_1 = require("mongoose");
 const throttler_1 = require("@nestjs/throttler");
+const common_2 = require("../../common");
+const dto_1 = require("./dto");
+const account_service_1 = require("../Account/account.service");
+const auth_service_1 = require("./auth.service");
 let AuthController = class AuthController {
-    constructor(authService, userService, cryptoService) {
+    constructor(authService, accountService, cryptoService) {
         this.authService = authService;
-        this.userService = userService;
+        this.accountService = accountService;
         this.cryptoService = cryptoService;
     }
     async getIdentifier(query, useragent) {
         if (query.email) {
             const TLEncrypt = await this.authService.handleIdentifier(query.email, useragent);
             if (!TLEncrypt)
-                throw new common_1.NotFoundException("Can't find your Lone account");
+                throw new common_1.NotFoundException({ message: "Can't find your Google account" });
             return { TL: TLEncrypt };
         }
         if (query.TL) {
@@ -38,45 +37,39 @@ let AuthController = class AuthController {
             const TLDecrypt = this.cryptoService.validateAccessToken(query.TL);
             if (!TLDecrypt)
                 throw new common_1.UnauthorizedException('Invalid or expired TL');
-            if (browser !== TLDecrypt.browser || device !== TLDecrypt.device || os !== TLDecrypt.os || ip !== TLDecrypt.ip) {
+            if (browser !== TLDecrypt.browser || device !== TLDecrypt.device || os !== TLDecrypt.os || ip !== TLDecrypt.ip)
                 throw new common_1.ForbiddenException('TL mismatch with current device');
-            }
-            const user = await this.userService.handleGetUser(TLDecrypt.accountId, ['email', 'name', 'picture']);
-            if (!user)
-                throw new common_1.NotFoundException('User not found');
-            return { email: user.email, name: user.name, picture: user.picture };
+            const user = await this.accountService.handleFindOneAccount(TLDecrypt.accountId, ['email', 'name', 'picture']);
+            return {
+                email: user.email,
+                name: user.name,
+                picture: user.picture ? (user.picture.includes('https://lh3.googleusercontent.com') ? user.picture : `https://lh3.googleusercontent.com/d/${user.picture}=s96-c`) : null,
+            };
         }
-        throw new common_1.BadRequestException('Missing required query parameter: email or TL');
+        throw new common_1.BadRequestException({ message: 'Missing required query parameter: email or TL' });
     }
-    async getAccountsSID(sidStr, aisStr, response) {
-        if (!aisStr)
-            throw new common_1.BadRequestException('AIS cookie is missing. Please log in again.');
-        const { data, newAIS } = await this.authService.handleGetAccountsSID(sidStr, aisStr);
-        newAIS && response.cookie('AIS', newAIS, { maxAge: common_2.constants.EXPIRED_SID * 1000, path: '/' });
-        return response.json(data);
+    async getAccountsSID(sidStr) {
+        const accounts = await this.authService.handleGetAccountsSID(sidStr);
+        return accounts;
     }
-    async removeAccountSIDClient(accountId, sidStr, aisStr, response) {
-        const { newAccounts, newAisStr } = await this.authService.handleRemoveAccountSessionClient(accountId, sidStr, aisStr);
-        newAccounts.length > 0 ? response.cookie('AIS', newAisStr, { maxAge: 2 * 365 * 24 * 60 * 60 * 1000, httpOnly: true, path: '/' }) : response.clearCookie('AIS', { path: '/' });
-        return response.sendStatus(204);
+    async removeAccountSIDClient(authuser, sidStr) {
+        const accounts = await this.authService.handleRemoveAccountInSession(authuser, sidStr);
+        return { accounts };
     }
     async postOAuth2SigninSession(query, body, sidStr) {
-        await this.authService.handleSigninWithSID(body.sub, sidStr);
+        await this.authService.handleSigninWithSID(body.authuser, sidStr);
         return { uri: query.continue };
     }
-    async postOAuth2SigninPassword(query, body, sidStr, aisStr, useragent, response) {
+    async postOAuth2SigninPassword(query, body, sidStr, useragent, response) {
         const TLDecrypt = this.cryptoService.validateAccessToken(body.TL);
         if (!TLDecrypt || useragent.browser !== TLDecrypt.browser || useragent.device !== TLDecrypt.device || useragent.os !== TLDecrypt.os || useragent.ip !== TLDecrypt.ip)
             throw new common_1.BadRequestException('Detected');
-        const { newSID, newAIS } = await this.authService.handleSigninWithPassword(TLDecrypt.accountId, body.password, TLDecrypt.os, TLDecrypt.device, TLDecrypt.browser, TLDecrypt.ip, sidStr, aisStr);
+        const { newSID } = await this.authService.handleSigninWithPassword(TLDecrypt.accountId, body.password, TLDecrypt.os, TLDecrypt.device, TLDecrypt.browser, TLDecrypt.ip, sidStr);
         response.cookie('SID', newSID, { maxAge: common_2.constants.EXPIRED_SID * 1000, httpOnly: true, path: '/' });
-        response.cookie('AIS', newAIS, { maxAge: common_2.constants.EXPIRED_SID * 1000, httpOnly: true, path: '/' });
         return response.json({ uri: query.continue });
     }
-    async getSignoutOfAllAccounts(sidStr, response) {
-        await this.authService.handleSignoutOfAllAccounts(sidStr);
-        response.clearCookie('SID');
-        return response.sendStatus(204);
+    async getSignoutOfAllAccounts(sidStr) {
+        await this.authService.handleSignoutAllAccounts(sidStr);
     }
 };
 exports.AuthController = AuthController;
@@ -92,24 +85,22 @@ __decorate([
     (0, common_1.Get)('accounts'),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
     __param(0, (0, common_2.Cookies)('SID')),
-    __param(1, (0, common_2.Cookies)('AIS')),
-    __param(2, (0, common_1.Res)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, String, Object]),
+    __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "getAccountsSID", null);
 __decorate([
     (0, common_1.Delete)('accounts/:id'),
+    (0, common_1.HttpCode)(common_1.HttpStatus.ACCEPTED),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_2.Cookies)('SID')),
-    __param(2, (0, common_2.Cookies)('AIS')),
-    __param(3, (0, common_1.Res)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [mongoose_1.Types.ObjectId, String, String, Object]),
+    __metadata("design:paramtypes", [Number, String]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "removeAccountSIDClient", null);
 __decorate([
     (0, common_1.Post)('signin/session'),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
     __param(0, (0, common_1.Query)()),
     __param(1, (0, common_1.Body)()),
     __param(2, (0, common_2.Cookies)('SID')),
@@ -123,26 +114,25 @@ __decorate([
     __param(0, (0, common_1.Query)()),
     __param(1, (0, common_1.Body)()),
     __param(2, (0, common_2.Cookies)('SID')),
-    __param(3, (0, common_2.Cookies)('AIS')),
-    __param(4, (0, common_2.UserAgent)()),
-    __param(5, (0, common_1.Res)()),
+    __param(3, (0, common_2.UserAgent)()),
+    __param(4, (0, common_1.Res)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [dto_1.DAuthQuery,
-        dto_1.DAuthBodyPassword, String, String, Object, Object]),
+        dto_1.DAuthBodyPassword, String, Object, Object]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "postOAuth2SigninPassword", null);
 __decorate([
     (0, common_1.Get)('accounts/signout'),
+    (0, common_1.HttpCode)(common_1.HttpStatus.ACCEPTED),
     __param(0, (0, common_2.Cookies)('SID')),
-    __param(1, (0, common_1.Res)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "getSignoutOfAllAccounts", null);
 exports.AuthController = AuthController = __decorate([
     (0, common_1.Controller)('auth'),
     __metadata("design:paramtypes", [auth_service_1.AuthService,
-        user_service_1.UserService,
+        account_service_1.AccountService,
         common_2.CryptoService])
 ], AuthController);
 //# sourceMappingURL=auth.controller.js.map

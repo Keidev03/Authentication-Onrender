@@ -1,3 +1,3 @@
-export { DClientPost } from './clientPost.dto';
-export { DClientPatch } from './clientPatch.dto';
+export { DClientBodyPost } from './clientBodyPost.dto';
+export { DClientBodyPatch } from './clientBodyPatch.dto';
 export { DClientQuery } from './clientQuery.dto';

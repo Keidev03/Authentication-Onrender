@@ -12,16 +12,17 @@ const mongoose_1 = require("@nestjs/mongoose");
 const client_schema_1 = require("./client.schema");
 const client_service_1 = require("./client.service");
 const client_controller_1 = require("./client.controller");
-const user_module_1 = require("../User/user.module");
+const account_module_1 = require("../Account/account.module");
 const session_module_1 = require("../Session/session.module");
+const common_2 = require("../../common");
 let ClientModule = class ClientModule {
 };
 exports.ClientModule = ClientModule;
 exports.ClientModule = ClientModule = __decorate([
     (0, common_1.Module)({
-        imports: [mongoose_1.MongooseModule.forFeature([{ name: client_schema_1.Client.name, schema: client_schema_1.ClientSchema }]), user_module_1.UserModule, session_module_1.SessionModule],
+        imports: [mongoose_1.MongooseModule.forFeature([{ name: client_schema_1.Client.name, schema: client_schema_1.ClientSchema }]), (0, common_1.forwardRef)(() => account_module_1.AccountModule), session_module_1.SessionModule],
         controllers: [client_controller_1.ClientController],
-        providers: [client_service_1.ClientService],
+        providers: [client_service_1.ClientService, common_2.GoogleDriveService],
         exports: [client_service_1.ClientService],
     })
 ], ClientModule);

@@ -23,79 +23,164 @@ let SessionService = class SessionService {
         this.sessionModel = sessionModel;
         this.cryptoService = cryptoService;
     }
-    async handleCreateSession(os, device, browser, ip, accountId, expireafterSeconds, transaction) {
+    async handleSaveSession(os, device, browser, ip, accountId, expireafterSeconds, transaction) {
         try {
             const sessionId = this.cryptoService.encrypt({ os, device, browser, ip });
-            const createSession = new this.sessionModel({ _id: sessionId, os, device, browser, ip, accountId: [accountId], expiredAt: Date.now() + expireafterSeconds * 1000 });
-            return createSession.save({ session: transaction ? transaction : undefined });
+            const createSession = new this.sessionModel({
+                _id: sessionId,
+                os,
+                device,
+                browser,
+                ip,
+                primaryAccountId: accountId,
+                linkedAccountIds: [{ _id: accountId, primary: true }],
+                expiredAt: Date.now() + expireafterSeconds * 1000,
+            });
+            return createSession.save({ session: transaction });
         }
         catch (error) {
-            console.error('findSessions: ', error.message);
-            throw new common_1.InternalServerErrorException('Error creating session');
+            throw new common_1.InternalServerErrorException({ message: 'Error creating session' });
         }
     }
-    async handleGetAllSessions(limit, lastId, fields) {
+    async handleFindSessions(limit, lastId, fields) {
         try {
             const query = {};
-            if (lastId) {
+            if (lastId)
                 query._id = { $gt: lastId };
-            }
             let selectedFields = '-_id';
-            if (Array.isArray(fields) && fields.includes('_id')) {
-                selectedFields = fields.join(' ');
-            }
-            else {
-                selectedFields += ' ' + fields.join(' ');
-            }
+            Array.isArray(fields) && fields.includes('_id') ? (selectedFields = fields.join(' ')) : (selectedFields += ' ' + fields.join(' '));
             const totalRecords = await this.sessionModel.countDocuments(query);
             const sessions = await this.sessionModel.find(query).select(selectedFields).limit(limit).sort({ createdAt: -1 }).lean().exec();
-            return {
-                sessions,
-                totalRecords,
-            };
+            return { sessions, totalRecords };
         }
         catch (error) {
-            console.error('findSessions: ', error.message);
-            throw new common_1.InternalServerErrorException('Error finding sessions');
+            throw new common_1.InternalServerErrorException({ message: 'Error finding sessions' });
         }
     }
-    async handleGetSession(_id, fields) {
+    async handleFindOneSession(_id, sessionFields, accountFields) {
         try {
-            let selectedFields = '-_id';
-            if (Array.isArray(fields) && fields.includes('_id')) {
-                selectedFields = fields.join(' ');
-            }
-            else {
-                selectedFields += ' ' + fields.join(' ');
-            }
-            return this.sessionModel.findOne({ _id }).select(selectedFields).lean().exec();
-        }
-        catch (error) {
-            console.error('handleGetSession: ', error.message);
-            throw new common_1.InternalServerErrorException('Error finding session');
-        }
-    }
-    async handleUpdateAccountInSession(_id, accountId, transaction) {
-        const updateSession = await this.sessionModel.updateOne({ _id }, { $addToSet: { accountId } }, { session: transaction ? transaction : undefined });
-        if (updateSession.matchedCount === 0)
-            throw new common_1.NotFoundException('Session not found');
-        if (updateSession.modifiedCount === 0)
-            throw new common_1.InternalServerErrorException('Session update failed');
-    }
-    async handleUpdateAndRetrieveAccountInSession(_id, accountId, transaction) {
-        const updatedSession = await this.sessionModel.findOneAndUpdate({ _id }, { $addToSet: { accountId } }, { new: true, session: transaction ? transaction : undefined });
-        if (!updatedSession)
-            throw new common_1.NotFoundException('Session not found');
-        return updatedSession;
-    }
-    async handleUpdateSessionOrCreateNew(_id, userId, os, device, browser, ip, transaction) {
-        try {
-            return await this.handleUpdateAndRetrieveAccountInSession(_id, userId, transaction);
+            let selectedAccountFields = '-_id';
+            if (Array.isArray(accountFields))
+                selectedAccountFields = accountFields.includes('_id') ? accountFields.join(' ') : '-_id ' + accountFields.join(' ');
+            let selectedSessionFields = '_id';
+            if (Array.isArray(sessionFields))
+                selectedSessionFields = sessionFields.includes('_id') ? sessionFields.join(' ') : '-_id ' + sessionFields.join(' ');
+            let query = this.sessionModel.findOne({ _id }).select(selectedSessionFields);
+            if (Array.isArray(sessionFields) && sessionFields.includes('linkedAccountIds'))
+                query = query.populate('linkedAccountIds._id', selectedAccountFields);
+            const session = await query.lean().exec();
+            if (!session)
+                throw new common_1.NotFoundException({ message: 'Session not found' });
+            return session;
         }
         catch (error) {
             if (error instanceof common_1.NotFoundException)
-                return await this.handleCreateSession(os, device, browser, ip, userId, common_2.constants.EXPIRED_SID, transaction);
+                throw error;
+            throw new common_1.InternalServerErrorException({ message: 'Error finding session' });
+        }
+    }
+    async handleSetLinkedAccountSignOut(_id, accountId, signedOut, retrieve = false, transaction) {
+        if (retrieve) {
+            const updatedSession = await this.sessionModel.findOneAndUpdate({ _id, 'linkedAccountIds._id': accountId }, { $set: { 'linkedAccountIds.$.signedOut': signedOut } }, { new: true, session: transaction });
+            if (!updatedSession)
+                throw new common_1.NotFoundException('Session not found');
+            return updatedSession;
+        }
+        else {
+            const updateSession = await this.sessionModel.updateOne({ _id, 'linkedAccountIds._id': accountId }, { $set: { 'linkedAccountIds.$.signedOut': signedOut } }, { session: transaction });
+            if (updateSession.matchedCount === 0)
+                throw new common_1.NotFoundException({ message: 'Session or linked account not found' });
+            if (updateSession.modifiedCount === 0)
+                throw new common_1.InternalServerErrorException({ message: 'Session update failed' });
+        }
+    }
+    async handleSetAllLinkedAccountsSignOut(_id, signedOut, retrieve = false, transaction) {
+        if (retrieve) {
+            const updatedSession = await this.sessionModel.findOneAndUpdate({ _id }, { $set: { 'linkedAccountIds.$[].signedOut': signedOut } }, { new: true, session: transaction });
+            if (!updatedSession)
+                throw new common_1.NotFoundException({ message: 'Session not found' });
+            return updatedSession;
+        }
+        else {
+            const updateSession = await this.sessionModel.updateOne({ _id }, { $set: { 'linkedAccountIds.$[].signedOut': signedOut } }, { session: transaction });
+            if (updateSession.matchedCount === 0)
+                throw new common_1.NotFoundException({ message: 'Session not found' });
+            if (updateSession.modifiedCount === 0)
+                throw new common_1.InternalServerErrorException({ message: 'No linked accounts were updated' });
+        }
+    }
+    async handleSetLinkedOneAccountSignOutAllSession(accountId, signedOut, transaction) {
+        const filter = { 'linkedAccountIds._id': accountId };
+        const update = { $set: { 'linkedAccountIds.$.signedOut': signedOut } };
+        const updateSession = await this.sessionModel.updateMany(filter, update, { session: transaction });
+        if (updateSession.matchedCount === 0)
+            throw new common_1.NotFoundException({ message: 'Session not found' });
+        if (updateSession.modifiedCount === 0)
+            throw new common_1.InternalServerErrorException({ message: 'No linked accounts were updated' });
+    }
+    async handleAddToSetLinkedAccountInSession(_id, accountId, retrieve = false, transaction) {
+        try {
+            const updateCondition = { _id, 'linkedAccountIds._id': { $ne: accountId } };
+            const updateData = { $addToSet: { linkedAccountIds: { _id: accountId } } };
+            if (retrieve) {
+                return await this.sessionModel.findOneAndUpdate(updateCondition, updateData, { new: true, session: transaction });
+            }
+            else {
+                await this.sessionModel.updateOne(updateCondition, updateData, { session: transaction });
+            }
+        }
+        catch (error) {
+            throw new common_1.InternalServerErrorException({ message: 'Error adding account to linked accounts' });
+        }
+    }
+    async hanldeFindOneAccountInSession(authuser, sidStr) {
+        try {
+            const session = await this.handleFindOneSession(sidStr, ['_id', 'linkedAccountIds'], ['_id']);
+            return session.linkedAccountIds[authuser]._id._id;
+        }
+        catch (error) {
             throw error;
+        }
+    }
+    async handleFindOneAndCreateOrUpdateSession(sidStr, accountId, os, device, browser, ip, transaction) {
+        try {
+            const session = await this.handleFindOneSession(sidStr, ['_id', 'linkedAccountIds'], ['_id']);
+            if (session && session.linkedAccountIds.length >= 10)
+                throw new common_1.BadRequestException('Cannot add more than 10 linked accounts');
+            const isLinkedAccount = session.linkedAccountIds.some((linkedAccount) => linkedAccount._id._id.equals(accountId));
+            const isSignedOut = isLinkedAccount && session.linkedAccountIds.find((account) => account._id._id.equals(accountId)).signedOut;
+            return isLinkedAccount
+                ? isSignedOut
+                    ? await this.handleSetLinkedAccountSignOut(sidStr, accountId, false, true, transaction)
+                    : session
+                : await this.handleAddToSetLinkedAccountInSession(sidStr, accountId, true, transaction);
+        }
+        catch (error) {
+            if (error instanceof common_1.BadRequestException)
+                throw error;
+            return await this.handleSaveSession(os, device, browser, ip, accountId, common_2.constants.EXPIRED_SID, transaction);
+        }
+    }
+    async handlePullAccountIdsLinkedFromSession(_id, accountId, signedOut, retrieve = false, transaction) {
+        try {
+            if (retrieve) {
+                const updatedSession = await this.sessionModel.findOneAndUpdate({ _id }, { $pull: { linkedAccountIds: { _id: accountId, signedOut } } }, { new: true, session: transaction });
+                if (!updatedSession)
+                    throw new common_1.NotFoundException('Session not found');
+                return updatedSession;
+            }
+            else {
+                const updateSession = await this.sessionModel.updateOne({ _id }, { $pull: { linkedAccountIds: { _id: accountId, signedOut } } }, { session: transaction });
+                if (updateSession.matchedCount === 0)
+                    throw new common_1.NotFoundException('Session not found');
+                if (updateSession.modifiedCount === 0)
+                    throw new common_1.InternalServerErrorException('Session update failed');
+            }
+        }
+        catch (error) {
+            if (error instanceof common_1.NotFoundException || error instanceof common_1.InternalServerErrorException)
+                throw error;
+            throw new common_1.InternalServerErrorException({ message: 'Error pulling linked account from session' });
         }
     }
     async handleDeleteSession(_id) {
@@ -105,8 +190,7 @@ let SessionService = class SessionService {
                 throw new common_1.NotFoundException('Session not found or could not be deleted');
         }
         catch (error) {
-            console.error('deleteSession: ', error.message);
-            throw new common_1.InternalServerErrorException('Error deleting session');
+            throw new common_1.InternalServerErrorException({ message: 'Error deleting session' });
         }
     }
 };

@@ -9,18 +9,18 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.OAuth2Module = void 0;
 const common_1 = require("@nestjs/common");
 const oauth2_controller_1 = require("./oauth2.controller");
-const user_module_1 = require("../User/user.module");
 const client_module_1 = require("../Client/client.module");
 const oauth2_service_1 = require("./oauth2.service");
 const session_module_1 = require("../Session/session.module");
 const token_module_1 = require("../Token/token.module");
 const common_2 = require("../../common");
+const account_module_1 = require("../Account/account.module");
 let OAuth2Module = class OAuth2Module {
 };
 exports.OAuth2Module = OAuth2Module;
 exports.OAuth2Module = OAuth2Module = __decorate([
     (0, common_1.Module)({
-        imports: [client_module_1.ClientModule, user_module_1.UserModule, session_module_1.SessionModule, token_module_1.TokenModule],
+        imports: [client_module_1.ClientModule, (0, common_1.forwardRef)(() => account_module_1.AccountModule), session_module_1.SessionModule, (0, common_1.forwardRef)(() => token_module_1.TokenModule)],
         controllers: [oauth2_controller_1.OAuth2Controller],
         providers: [oauth2_service_1.OAuth2Service, common_2.CryptoService],
         exports: [oauth2_service_1.OAuth2Service],

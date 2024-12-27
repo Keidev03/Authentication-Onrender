@@ -1,1 +1,1 @@
-{"version":3,"file":"index.js","sourceRoot":"","sources":["../../../../src/module/OAuth2/dto/index.ts"],"names":[],"mappings":";;;AAAA,qDAAiD;AAAxC,+GAAA,YAAY,OAAA"}
+{"version":3,"file":"index.js","sourceRoot":"","sources":["../../../../src/module/OAuth2/dto/index.ts"],"names":[],"mappings":";;;AAAA,qDAAiD;AAAxC,+GAAA,YAAY,OAAA;AACrB,mDAA2E;AAAlE,oHAAA,kBAAkB,OAAA;AAAE,qHAAA,mBAAmB,OAAA"}

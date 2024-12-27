@@ -1,56 +1,55 @@
 import { Cache } from '@nestjs/cache-manager';
 import { Types, Connection } from 'mongoose';
 import { CryptoService, EAccessType, EPrompt, EResponseType, EScope } from '../../common';
-import { UserService } from '../User/user.service';
+import { AccountService } from '../Account/account.service';
 import { TokenService } from '../Token/token.service';
 import { SessionService } from '../Session/session.service';
 import { ClientService } from '../Client/client.service';
 export declare class OAuth2Service {
-    private readonly userService;
+    private readonly accountService;
     private readonly sessionService;
     private readonly clientService;
     private readonly tokenService;
     private readonly cryptoService;
     private readonly connection;
     private readonly cacheManager;
-    constructor(userService: UserService, sessionService: SessionService, clientService: ClientService, tokenService: TokenService, cryptoService: CryptoService, connection: Connection, cacheManager: Cache);
-    handleSigninWithSID(accountId: Types.ObjectId, clientId: Types.ObjectId, redirectUri: string, responseType: EResponseType[], scope: EScope[], accessType: EAccessType, prompt: EPrompt, nonce: string, state: string, sidStr: string): Promise<{
-        client_name: string;
-        client_picture: string;
-        redirect_uri: string;
+    constructor(accountService: AccountService, sessionService: SessionService, clientService: ClientService, tokenService: TokenService, cryptoService: CryptoService, connection: Connection, cacheManager: Cache);
+    handleSigninWithSID(authuser: number, clientId: Types.ObjectId, redirectUri: string, responseType: EResponseType[], scope: EScope[], accessType: EAccessType, prompt: EPrompt, nonce: string, state: string, sidStr: string): Promise<{
+        clientName: string;
+        clientPicture: string;
+        redirectUri: string;
         email: string;
         picture: string;
         code?: string;
-        access_token?: string;
-        expires_in?: number;
-        token_type?: string;
-        id_token?: string;
+        accessToken?: string;
+        expiresIn?: number;
+        tokenType?: string;
+        idToken?: string;
         scope: string;
         consent?: {
-            privacy_policy: string;
-            terms_of_service: string;
+            privacyPolicy: string;
+            termsOfService: string;
         };
-        authuser: string;
+        authuser: number;
     }>;
-    handleSigninWithPassword(accountId: Types.ObjectId, password: string, clientId: Types.ObjectId, redirectUri: string, responseType: EResponseType[], scope: EScope[], accessType: EAccessType, prompt: EPrompt, nonce: string, state: string, os: string, device: string, browser: string, ip: string, sidStr: string, aisStr?: string): Promise<{
-        client_name: string;
-        client_picture: string;
+    handleSigninWithPassword(accountId: Types.ObjectId, password: string, clientId: Types.ObjectId, redirectUri: string, responseType: EResponseType[], scope: EScope[], accessType: EAccessType, prompt: EPrompt, nonce: string, state: string, os: string, device: string, browser: string, ip: string, sidStr: string): Promise<{
+        clientName: string;
+        clientPicture: string;
         newSID: string;
-        newAIS: string;
-        redirect_uri: string;
+        redirectUri: string;
         email: string;
         picture: string;
         code?: string;
-        access_token?: string;
-        expires_in?: number;
-        token_type?: string;
-        id_token?: string;
+        accessUoken?: string;
+        expiresIn?: number;
+        tokenType?: string;
+        idToken?: string;
         scope: string;
         consent?: {
-            privacy_policy: string;
-            terms_of_service: string;
+            privacyPolicy: string;
+            termsOfService: string;
         };
-        authuser: string;
+        authuser: number;
     }>;
     handleCode(sid: string, accountId: Types.ObjectId, scope: EScope[], accessType: EAccessType, nonce: string): string;
     buildResponse(data: any, state: string, scope: EScope[], prompt: string): any;

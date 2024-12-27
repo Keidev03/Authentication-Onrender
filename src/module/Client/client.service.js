@@ -18,74 +18,64 @@ const mongoose_1 = require("@nestjs/mongoose");
 const mongoose_2 = require("mongoose");
 const crypto = require("crypto");
 const client_schema_1 = require("./client.schema");
+const common_2 = require("../../common");
+const config_1 = require("@nestjs/config");
 let ClientService = class ClientService {
-    constructor(clientModel) {
+    constructor(clientModel, driveService, configService) {
         this.clientModel = clientModel;
+        this.driveService = driveService;
+        this.configService = configService;
+        this.idFolderLogo = configService.get('DRIVE_ID_FOLDER_LOGO');
     }
     generateClientSecret() {
         return crypto.randomBytes(20).toString('hex');
     }
-    async handleCreateClient(owner, nameClient, scopes, redirectUris) {
+    async handleSaveClient(owner, nameClient, scopes, redirectUris) {
         try {
-            const createClient = new this.clientModel({
-                name: nameClient,
-                clientSecret: this.generateClientSecret(),
-                owner,
-                scopes: scopes,
-                redirectUris,
-            });
+            const createClient = new this.clientModel({ name: nameClient, clientSecret: this.generateClientSecret(), owner, scope: scopes, redirectUris });
             return createClient.save();
         }
         catch (error) {
-            console.error('func createClient - Error: ', error.message);
-            throw new common_1.InternalServerErrorException(error.message);
+            throw new common_1.InternalServerErrorException({ message: 'Error saving client' });
         }
     }
-    async handleGetClient(_id, fields) {
+    async handleFindOneClient(_id, fields) {
         try {
             let selectedFields = '-_id';
-            if (Array.isArray(fields) && fields.includes('_id')) {
-                selectedFields = fields.join(' ');
+            Array.isArray(fields) && fields.includes('_id') ? (selectedFields = fields.join(' ')) : (selectedFields += ' ' + (fields ? fields.join(' ') : ''));
+            const client = await this.clientModel.findById(_id).select(selectedFields).exec();
+            if (!client) {
+                throw new common_1.BadRequestException({
+                    error: 'unauthorized_client',
+                    error_description: `The OAuth client was not found or is unauthorized to use the requested grant type.`,
+                });
             }
-            else {
-                selectedFields += ' ' + (fields ? fields.join(' ') : '');
-            }
-            return this.clientModel.findById(_id).select(selectedFields).exec();
+            return client;
         }
         catch (error) {
-            console.error('func findClientByClientId - Error: ', error.message);
-            throw new common_1.InternalServerErrorException(error.message);
+            if (error instanceof common_1.BadRequestException)
+                throw error;
+            throw new common_1.InternalServerErrorException({ message: 'Error finding client' });
         }
     }
-    async handleGetClientByAccountId(accountId, fields) {
+    async handleFindOneClientByAccountId(accountId, fields) {
         try {
             let selectedFields = '-_id';
-            if (Array.isArray(fields) && fields.includes('_id')) {
-                selectedFields = fields.join(' ');
-            }
-            else {
-                selectedFields += ' ' + (fields ? fields.join(' ') : '');
-            }
+            Array.isArray(fields) && fields.includes('_id') ? (selectedFields = fields.join(' ')) : (selectedFields += ' ' + (fields ? fields.join(' ') : ''));
             return this.clientModel
                 .find({ $or: [{ owner: accountId }, { editor: accountId }] })
                 .select(selectedFields)
                 .exec();
         }
         catch (error) {
-            console.error('func findClientByUser - Error: ', error.message);
-            throw new common_1.InternalServerErrorException(error.message);
+            throw new common_1.InternalServerErrorException({ message: 'Error finding client' });
         }
     }
-    async handleGetAllClients(page, limit, fields) {
+    async handleFindClients(page, limit, fields) {
         try {
             let selectedFields = '-_id';
             let query = {};
-            if (fields && fields.includes('_id')) {
-                selectedFields = fields.join(' ');
-            }
-            else {
-                selectedFields += ' ' + (fields ? fields.join(' ') : '');
-            }
+            fields && fields.includes('_id') ? (selectedFields = fields.join(' ')) : (selectedFields += ' ' + (fields ? fields.join(' ') : ''));
             const totalRecords = await this.clientModel.countDocuments();
             const totalPages = Math.ceil(totalRecords / limit);
             const clients = await this.clientModel
@@ -98,48 +88,62 @@ let ClientService = class ClientService {
             return { clients, currentPage: page, totalPages, totalRecords };
         }
         catch (error) {
-            console.error('func findClients - Error: ', error.message);
-            throw new common_1.InternalServerErrorException(error.message);
+            throw new common_1.InternalServerErrorException({ message: 'Error finding client' });
         }
     }
-    async handleUpdateClient(_id, data, accountId) {
+    async handleUpdateClient(_id, accountId, data, picture, retrieve = false) {
         try {
-            const client = await this.handleGetClient(_id, ['owner', 'editor']);
+            const client = await this.handleFindOneClient(_id, ['owner', 'editor', 'picture']);
             const isEditorNotAuthorized = accountId && !client.editor.includes(accountId);
             const isNotOwner = client.owner !== accountId;
-            if (isEditorNotAuthorized && isNotOwner) {
+            if (isEditorNotAuthorized && isNotOwner)
                 throw new common_1.ForbiddenException('Edits are not permitted or user not found in editors list');
+            const updateQuery = {};
+            if (picture) {
+                updateQuery.picture = await this.driveService.UploadImage(picture, client._id.toString(), 500, 500, 500, this.idFolderLogo);
+                if (!client.picture.includes('http'))
+                    await this.driveService.DeleteFile(client.picture);
             }
-            const allowedFields = ['name', 'scopes', 'isActive', 'redirectUris'];
-            const updateFields = Object.keys(data)
-                .filter((key) => allowedFields.includes(key))
-                .reduce((obj, key) => {
-                if (key === 'scopes') {
-                    obj[`$addToSet`] = {
-                        ...obj[`$addToSet`],
-                        [key]: {
-                            $each: data[key],
-                        },
-                    };
-                }
-                else {
-                    obj[`$set`] = {
-                        ...obj[`$set`],
-                        [key]: data[key],
-                    };
-                }
-                return obj;
-            }, {});
-            const updatedClient = await this.clientModel.updateOne({ _id }, updateFields).exec();
-            if (!updatedClient.acknowledged)
-                throw new common_1.NotFoundException('Client not found');
+            if (data.clientSecret)
+                updateQuery.clientSecret = this.generateClientSecret();
+            for (const [key, value] of Object.entries(data))
+                if (value !== undefined && key !== 'clientSecret')
+                    updateQuery[key] = value;
+            if (retrieve) {
+                const updatedClient = await this.clientModel.findOneAndUpdate({ _id }, updateQuery, { new: true }).lean().exec();
+                if (!updatedClient)
+                    throw new common_1.NotFoundException('Client not found');
+                return updatedClient;
+            }
+            else {
+                const updateClient = await this.clientModel.updateOne({ _id }, updateQuery).exec();
+                if (!updateClient.acknowledged)
+                    throw new common_1.NotFoundException('Client not found');
+            }
         }
         catch (error) {
-            if (error instanceof common_1.ForbiddenException)
+            if (error instanceof common_1.ForbiddenException || error instanceof common_1.NotFoundException)
                 throw error;
-            console.error('func updateClient - Error: ', error.message);
-            throw new common_1.InternalServerErrorException(error.message);
+            throw new common_1.InternalServerErrorException({ message: 'Error update client' });
         }
+    }
+    async handleUpdateEditors(clientId, editors, action) {
+        const update = action === 'add' ? { $addToSet: { editor: { $each: editors } } } : { $pull: { editor: { $in: editors } } };
+        const result = await this.clientModel.updateOne({ _id: clientId }, update).exec();
+        if (!result.acknowledged)
+            throw new common_1.NotFoundException('Client not found');
+    }
+    async handleUpdateScopes(clientId, scopes, action) {
+        const update = action === 'add' ? { $addToSet: { scopes: { $each: scopes } } } : { $pull: { scopes: { $in: scopes } } };
+        const result = await this.clientModel.updateOne({ _id: clientId }, update).exec();
+        if (!result.acknowledged)
+            throw new common_1.NotFoundException('Client not found');
+    }
+    async handleUpdateRedirectUris(clientId, redirectUris, action) {
+        const update = action === 'add' ? { $addToSet: { redirectUris: { $each: redirectUris } } } : { $pull: { redirectUris: { $in: redirectUris } } };
+        const result = await this.clientModel.updateOne({ _id: clientId }, update).exec();
+        if (!result.acknowledged)
+            throw new common_1.NotFoundException('Client not found');
     }
     async handleDeleteClient(_id) {
         try {
@@ -150,24 +154,7 @@ let ClientService = class ClientService {
         catch (error) {
             if (error instanceof common_1.NotFoundException)
                 throw error;
-            console.error('handleDeleteClient: ', error.message);
-            throw new common_1.InternalServerErrorException('Error delete client');
-        }
-    }
-    async handleValidateClient(_id, clientSecret, scope, redirectUri, errorFunc) {
-        try {
-            const client = await this.handleGetClient(_id, ['_id', 'name', 'clientSecret', 'scope', 'redirectUris']);
-            if (!client)
-                return errorFunc(null, 'invalid_client', 'Client not found');
-            if (clientSecret && client.clientSecret !== clientSecret)
-                return errorFunc(null, 'invalid_client', 'Client secret does not match');
-            if (redirectUri && !client.redirectUris.includes(redirectUri))
-                return errorFunc(null, 'invalid_request', 'Redirect URI is not valid');
-            if (scope && !scope.every((scope) => client.scope.includes(scope)))
-                return errorFunc(null, 'invalid_scope', 'Requested scope is not allowed');
-        }
-        catch (error) {
-            return errorFunc(null, 'server_error', error.message);
+            throw new common_1.InternalServerErrorException({ message: 'Error delete client' });
         }
     }
 };
@@ -175,6 +162,8 @@ exports.ClientService = ClientService;
 exports.ClientService = ClientService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, mongoose_1.InjectModel)(client_schema_1.Client.name)),
-    __metadata("design:paramtypes", [mongoose_2.Model])
+    __metadata("design:paramtypes", [mongoose_2.Model,
+        common_2.GoogleDriveService,
+        config_1.ConfigService])
 ], ClientService);
 //# sourceMappingURL=client.service.js.map

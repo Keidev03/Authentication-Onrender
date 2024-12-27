@@ -20,13 +20,13 @@ const mongoose_2 = require("@nestjs/mongoose");
 const bcrypt = require("bcryptjs");
 const contants_1 = require("../../common/contants");
 const common_2 = require("../../common");
-const user_service_1 = require("../User/user.service");
+const account_service_1 = require("../Account/account.service");
 const token_service_1 = require("../Token/token.service");
 const session_service_1 = require("../Session/session.service");
 const client_service_1 = require("../Client/client.service");
 let OAuth2Service = class OAuth2Service {
-    constructor(userService, sessionService, clientService, tokenService, cryptoService, connection, cacheManager) {
-        this.userService = userService;
+    constructor(accountService, sessionService, clientService, tokenService, cryptoService, connection, cacheManager) {
+        this.accountService = accountService;
         this.sessionService = sessionService;
         this.clientService = clientService;
         this.tokenService = tokenService;
@@ -34,22 +34,15 @@ let OAuth2Service = class OAuth2Service {
         this.connection = connection;
         this.cacheManager = cacheManager;
     }
-    async handleSigninWithSID(accountId, clientId, redirectUri, responseType, scope, accessType, prompt, nonce, state, sidStr) {
+    async handleSigninWithSID(authuser, clientId, redirectUri, responseType, scope, accessType, prompt, nonce, state, sidStr) {
         const transaction = await this.connection.startSession();
         transaction.startTransaction();
         try {
             if (!sidStr)
                 throw new common_1.BadRequestException({ message: 'No account found in session' });
-            const { os, device, browser, ip } = this.cryptoService.decrypt(sidStr);
-            const user = await this.userService.handleGetUser(accountId, ['_id', 'email', 'name', 'firstName', 'lastName', 'password', 'picture']);
-            if (!user)
-                throw new common_1.NotFoundException({ message: 'User not found' });
-            const session = await this.sessionService.handleGetSession(sidStr, ['_id', 'accountId']);
-            if (!session)
-                throw new common_1.NotFoundException({ message: 'Session not found' });
-            if (!session.accountId.toString().includes(user._id.toString()))
-                throw new common_1.BadRequestException({ message: 'No account found in session' });
-            const client = await this.clientService.handleGetClient(clientId, ['_id', 'name', 'picture', 'scope', 'redirectUris', 'privacyPolicy', 'termsOfService']);
+            const accountId = await this.sessionService.hanldeFindOneAccountInSession(authuser, sidStr);
+            const account = await this.accountService.handleFindOneAccount(accountId, ['_id', 'email', 'name', 'firstName', 'lastName', 'password', 'picture', 'clientId']);
+            const client = await this.clientService.handleFindOneClient(clientId, ['_id', 'name', 'picture', 'scopes', 'redirectUris', 'privacyPolicy', 'termsOfService']);
             if (!client) {
                 throw new common_1.BadRequestException({
                     error: 'unauthorized_client',
@@ -62,7 +55,7 @@ let OAuth2Service = class OAuth2Service {
                     error_description: `The redirect URI in the request: <${redirectUri}> does not match any of the registered redirect URIs.`,
                 });
             }
-            if (scope && scope.some((s) => !client.scope.includes(s))) {
+            if (scope && scope.some((s) => !client.scopes.includes(s))) {
                 throw new common_1.BadRequestException({
                     uri: redirectUri,
                     state: state,
@@ -70,75 +63,68 @@ let OAuth2Service = class OAuth2Service {
                     error_description: `One or more of the requested scopes are invalid, unknown, or not authorized. Requested scopes: <${scope.join(', ')}>`,
                 });
             }
-            const token = sidStr && accessType ? await this.tokenService.handleGetTokenByFields(sidStr, user._id, client._id, ['_id', 'scope', 'expiredAt']) : null;
-            const consent = token && token.scope && scope.length === token.scope.length
+            const token = sidStr && accessType
+                ? await (async () => {
+                    try {
+                        const token = await this.tokenService.handleFindOneTokenByFields(sidStr, account._id, client._id, ['_id', 'scope', 'expiredAt']);
+                        return token;
+                    }
+                    catch (error) {
+                        return undefined;
+                    }
+                })()
+                : undefined;
+            const isClientIncluded = account.clientId ? account.clientId.some((clientId) => clientId.equals(client._id)) : false;
+            if (!isClientIncluded)
+                await this.accountService.handleUpdateClientIdsToAccount(account._id, [client._id], 'add', transaction);
+            const consent = isClientIncluded && token && token.scope && scope.length === token.scope.length
                 ? (() => {
-                    const sortedScope = [...scope].sort();
-                    const sortedTokenScope = [...token.scope].sort();
-                    return !sortedScope.every((val, index) => val === sortedTokenScope[index]);
+                    return ![...scope].sort().every((val, index) => val === [...token.scope].sort()[index]);
                 })()
                 : true;
-            token &&
-                consent &&
-                (await this.tokenService.handleUpdateScopeInToken(token._id, scope, transaction)) &&
-                (await this.tokenService.handleUpdateExpiredInToken(token._id, token.expiredAt, transaction));
-            if (!token && accessType)
-                await this.tokenService.handleCreateToken(session._id, client._id, user._id, scope, contants_1.constants.EXPIRED_REFRESH_TOKEN, transaction);
-            const code = responseType.includes(common_2.EResponseType.CODE) ? this.handleCode(sidStr, user._id, scope, accessType, nonce) : undefined;
-            const access_token = responseType.includes(common_2.EResponseType.TOKEN) ? this.tokenService.handleCreateAccessToken(session._id, client._id, user._id, scope) : undefined;
-            const id_token = responseType.includes(common_2.EResponseType.ID_TOKEN) && scope.includes(common_2.EScope.OPENID)
-                ? this.tokenService.handleCreateIDToken(user.email, clientId, contants_1.constants.EXPIRED_ID_TOKEN, user.name, user.firstName, user.lastName, user.picture, access_token.access_token, nonce)
+            const code = responseType.includes(common_2.EResponseType.CODE) ? this.handleCode(sidStr, account._id, scope, accessType, nonce) : undefined;
+            const accessToken = responseType.includes(common_2.EResponseType.TOKEN) ? this.tokenService.handleCreateAccessToken(client._id, account._id, scope) : undefined;
+            const idToken = responseType.includes(common_2.EResponseType.ID_TOKEN) && scope.includes(common_2.EScope.OPENID)
+                ? this.tokenService.handleCreateIDToken(account.email, clientId, contants_1.constants.EXPIRED_ID_TOKEN, account.name, account.firstName, account.lastName, account.picture, accessToken.accessToken, nonce)
                 : undefined;
             await transaction.commitTransaction();
             return {
-                client_name: client.name,
-                client_picture: client.picture,
-                redirect_uri: redirectUri,
-                email: user.email,
-                picture: user.picture,
+                clientName: client.name,
+                clientPicture: client.picture,
+                redirectUri: redirectUri,
+                email: account.email,
+                picture: account.picture ? (account.picture.includes('https://lh3.googleusercontent.com') ? account.picture : `https://lh3.googleusercontent.com/d/${account.picture}=s96-c`) : null,
                 ...(code && { code }),
-                ...(access_token && { access_token: access_token.access_token, expires_in: access_token.expires_in, token_type: access_token.token_type }),
-                ...(id_token && { id_token }),
+                ...(accessToken && { access_token: accessToken.accessToken, expires_in: accessToken.expiresIn, token_type: accessToken.tokenType }),
+                ...(idToken && { idToken }),
                 scope: scope.join(' '),
-                ...((prompt === common_2.EPrompt.CONSENT || consent) && { consent: { privacy_policy: client.privacyPolicy, terms_of_service: client.termsOfService } }),
-                authuser: '0',
+                ...((prompt === common_2.EPrompt.CONSENT || consent) && { consent: { privacyPolicy: client.privacyPolicy, termsOfService: client.termsOfService } }),
+                authuser,
             };
         }
         catch (error) {
             await transaction.abortTransaction();
             if (error instanceof common_1.BadRequestException || error instanceof common_1.NotFoundException)
                 throw error;
-            console.error('func handleSigninWithSID - Error: ', error.message);
-            throw new common_1.InternalServerErrorException(error.message);
+            throw new common_1.InternalServerErrorException({ message: 'Error signin with session' });
         }
         finally {
             await transaction.endSession();
         }
     }
-    async handleSigninWithPassword(accountId, password, clientId, redirectUri, responseType, scope, accessType, prompt, nonce, state, os, device, browser, ip, sidStr, aisStr = null) {
+    async handleSigninWithPassword(accountId, password, clientId, redirectUri, responseType, scope, accessType, prompt, nonce, state, os, device, browser, ip, sidStr) {
         const transaction = await this.connection.startSession();
         transaction.startTransaction();
         try {
-            const accounts = aisStr ? this.cryptoService.decodeAIS(aisStr) : [];
-            if (accounts.length >= 10)
-                throw new common_1.UnauthorizedException({ message: 'Session limit reached' });
-            const client = await this.clientService.handleGetClient(clientId, ['_id', 'name', 'picture', 'scope', 'redirectUris', 'privacyPolicy', 'termsOfService']);
-            const user = await this.userService.handleGetUser(accountId, ['_id', 'email', 'name', 'firstName', 'lastName', 'password', 'picture']);
-            if (!user)
-                throw new common_1.NotFoundException({ message: 'User not found' });
-            if (!client) {
-                throw new common_1.BadRequestException({
-                    error: 'unauthorized_client',
-                    error_description: `The OAuth client was not found or is unauthorized to use the requested grant type.`,
-                });
-            }
+            const client = await this.clientService.handleFindOneClient(clientId, ['_id', 'name', 'picture', 'scopes', 'redirectUris', 'privacyPolicy', 'termsOfService']);
+            const account = await this.accountService.handleFindOneAccount(accountId, ['_id', 'email', 'name', 'firstName', 'lastName', 'password', 'picture', 'clientId']);
             if (!client.redirectUris || !client.redirectUris.includes(redirectUri)) {
                 throw new common_1.BadRequestException({
                     error: 'redirect_uri_mismatch',
                     error_description: `The redirect URI in the request: <${redirectUri}> does not match any of the registered redirect URIs.`,
                 });
             }
-            if (scope && scope.some((s) => !client.scope.includes(s))) {
+            if (scope && scope.some((s) => !client.scopes.includes(s))) {
                 throw new common_1.BadRequestException({
                     uri: redirectUri,
                     state: state,
@@ -146,56 +132,55 @@ let OAuth2Service = class OAuth2Service {
                     error_description: `One or more of the requested scopes are invalid, unknown, or not authorized. Requested scopes: <${scope.join(', ')}>`,
                 });
             }
-            if (!bcrypt.compareSync(password, user.password))
+            if (!bcrypt.compareSync(password, account.password))
                 throw new common_1.UnauthorizedException({ message: 'Invalid password' });
-            if (!accounts.includes(user._id.toString()))
-                accounts.push(user._id.toString());
-            const session = sidStr
-                ? await this.sessionService.handleUpdateSessionOrCreateNew(sidStr, user._id, os, device, browser, ip, transaction)
-                : await this.sessionService.handleCreateSession(os, device, browser, ip, user._id, contants_1.constants.EXPIRED_SID, transaction);
-            const aisEncrypted = this.cryptoService.encodeAIS(accounts);
-            const token = sidStr && accessType ? await this.tokenService.handleGetTokenByFields(sidStr, user._id, client._id, ['_id', 'scope', 'expiredAt']) : null;
-            const consent = token && token.scope && scope.length === token.scope.length
+            const session = await this.sessionService.handleFindOneAndCreateOrUpdateSession(sidStr, account._id, os, device, browser, ip, transaction);
+            const indexAuthuser = session.linkedAccountIds.findIndex((account) => account._id._id.toString() === accountId.toString());
+            const token = sidStr && accessType
+                ? await (async () => {
+                    try {
+                        const token = await this.tokenService.handleFindOneTokenByFields(sidStr, account._id, client._id, ['_id', 'scope', 'expiredAt']);
+                        return token;
+                    }
+                    catch (error) {
+                        return undefined;
+                    }
+                })()
+                : undefined;
+            const isClientIncluded = account.clientId ? account.clientId.some((clientId) => clientId.equals(client._id)) : false;
+            if (!isClientIncluded)
+                await this.accountService.handleUpdateClientIdsToAccount(account._id, [client._id], 'add', transaction);
+            const consent = isClientIncluded && token && token.scope && scope.length === token.scope.length
                 ? (() => {
-                    const sortedScope = [...scope].sort();
-                    const sortedTokenScope = [...token.scope].sort();
-                    return !sortedScope.every((val, index) => val === sortedTokenScope[index]);
+                    return ![...scope].sort().every((val, index) => val === [...token.scope].sort()[index]);
                 })()
                 : true;
-            token &&
-                consent &&
-                (await this.tokenService.handleUpdateScopeInToken(token._id, scope, transaction)) &&
-                (await this.tokenService.handleUpdateExpiredInToken(token._id, token.expiredAt, transaction));
-            if (!token && accessType)
-                await this.tokenService.handleCreateToken(session._id, client._id, user._id, scope, contants_1.constants.EXPIRED_REFRESH_TOKEN, transaction);
-            const code = responseType.includes(common_2.EResponseType.CODE) ? this.handleCode(session._id, user._id, scope, accessType, nonce) : undefined;
-            const access_token = responseType.includes(common_2.EResponseType.TOKEN) ? this.tokenService.handleCreateAccessToken(session._id, client._id, user._id, scope) : undefined;
-            const id_token = responseType.includes(common_2.EResponseType.ID_TOKEN) && scope.includes(common_2.EScope.OPENID)
-                ? this.tokenService.handleCreateIDToken(user.email, clientId, contants_1.constants.EXPIRED_ID_TOKEN, user.name, user.firstName, user.lastName, user.picture, access_token.access_token, nonce)
+            const code = responseType.includes(common_2.EResponseType.CODE) ? this.handleCode(session._id, account._id, scope, accessType, nonce) : undefined;
+            const accessToken = responseType.includes(common_2.EResponseType.TOKEN) ? this.tokenService.handleCreateAccessToken(client._id, account._id, scope) : undefined;
+            const idToken = responseType.includes(common_2.EResponseType.ID_TOKEN) && scope.includes(common_2.EScope.OPENID)
+                ? this.tokenService.handleCreateIDToken(account.email, clientId, contants_1.constants.EXPIRED_ID_TOKEN, account.name, account.firstName, account.lastName, account.picture, accessToken.accessToken, nonce)
                 : undefined;
             await transaction.commitTransaction();
             return {
-                client_name: client.name,
-                client_picture: client.picture,
+                clientName: client.name,
+                clientPicture: client.picture,
                 newSID: session._id,
-                newAIS: aisEncrypted,
-                redirect_uri: redirectUri,
-                email: user.email,
-                picture: user.picture,
+                redirectUri: redirectUri,
+                email: account.email,
+                picture: account.picture ? (account.picture.includes('https://lh3.googleusercontent.com') ? account.picture : `https://lh3.googleusercontent.com/d/${account.picture}=s96-c`) : null,
                 ...(code && { code }),
-                ...(access_token && { access_token: access_token.access_token, expires_in: access_token.expires_in, token_type: access_token.token_type }),
-                ...(id_token && { id_token }),
+                ...(accessToken && { access_token: accessToken.accessToken, expires_in: accessToken.expiresIn, token_type: accessToken.tokenType }),
+                ...(idToken && { idToken }),
                 scope: scope.join(' '),
-                ...((prompt === common_2.EPrompt.CONSENT || consent) && { consent: { privacy_policy: client.privacyPolicy, terms_of_service: client.termsOfService } }),
-                authuser: '0',
+                ...((prompt === common_2.EPrompt.CONSENT || consent) && { consent: { privacyPolicy: client.privacyPolicy, termsOfService: client.termsOfService } }),
+                authuser: indexAuthuser,
             };
         }
         catch (error) {
             await transaction.abortTransaction();
             if (error instanceof common_1.UnauthorizedException || error instanceof common_1.BadRequestException || error instanceof common_1.NotFoundException)
                 throw error;
-            console.error('func handleSigninWithPassword - Error:', error.message);
-            throw new common_1.InternalServerErrorException(error.message);
+            throw new common_1.InternalServerErrorException({ message: 'Error signin with password' });
         }
         finally {
             transaction.endSession();
@@ -223,7 +208,7 @@ exports.OAuth2Service = OAuth2Service = __decorate([
     (0, common_1.Injectable)(),
     __param(5, (0, mongoose_2.InjectConnection)()),
     __param(6, (0, common_1.Inject)(cache_manager_1.CACHE_MANAGER)),
-    __metadata("design:paramtypes", [user_service_1.UserService,
+    __metadata("design:paramtypes", [account_service_1.AccountService,
         session_service_1.SessionService,
         client_service_1.ClientService,
         token_service_1.TokenService,

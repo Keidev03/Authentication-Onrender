@@ -21,7 +21,7 @@ async function Bootstrap() {
         transform: true,
         whitelist: true,
     }));
-    app.useGlobalFilters(new common_2.ErrorMiddleware());
+    app.useGlobalFilters(new common_2.AllExceptionsFilter());
     app.use(cookieParser());
     const allowedOrigins = configService.get('ALLOWED_ORIGINS');
     const allowedOriginsArr = allowedOrigins ? allowedOrigins.split(',') : [];

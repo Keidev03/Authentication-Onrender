@@ -21,20 +21,21 @@ const jwt_1 = require("@nestjs/jwt");
 const contants_1 = require("../../common/contants");
 const token_schema_1 = require("./token.schema");
 const common_2 = require("../../common");
-const user_service_1 = require("../User/user.service");
 const client_service_1 = require("../Client/client.service");
 const session_service_1 = require("../Session/session.service");
+const account_service_1 = require("../Account/account.service");
 let TokenService = class TokenService {
-    constructor(tokenModel, userService, clientService, sessionService, cryptoService, jwtService, cacheManager) {
+    constructor(tokenModel, accountService, clientService, sessionService, cryptoService, jwtService, connection, cacheManager) {
         this.tokenModel = tokenModel;
-        this.userService = userService;
+        this.accountService = accountService;
         this.clientService = clientService;
         this.sessionService = sessionService;
         this.cryptoService = cryptoService;
         this.jwtService = jwtService;
+        this.connection = connection;
         this.cacheManager = cacheManager;
     }
-    async handleCreateToken(sid, clientId, accountId, scope, expireafterSeconds, transaction) {
+    async handleSaveToken(sid, clientId, accountId, scope, expireafterSeconds, transaction) {
         try {
             const tokenEncrypt = this.cryptoService.encrypt({ accountId });
             const createToken = new this.tokenModel({
@@ -45,41 +46,40 @@ let TokenService = class TokenService {
                 scope: scope,
                 expiredAt: Date.now() + expireafterSeconds * 1000,
             });
-            return createToken.save({ session: transaction ? transaction : undefined });
+            return createToken.save({ session: transaction });
         }
         catch (error) {
-            console.error('createToken: ', error.message);
-            throw new common_1.InternalServerErrorException('Error creating token');
+            throw new common_1.InternalServerErrorException({ message: 'Error creating token' });
         }
     }
-    async handleGetTokenByFields(sid, accountId, clientId, fields) {
+    async handleFindOneTokenByFields(sid, accountId, clientId, fields) {
         try {
             let selectedFields = '-_id';
-            if (Array.isArray(fields) && fields.includes('_id')) {
-                selectedFields = fields.join(' ');
-            }
-            else {
-                selectedFields += ' ' + fields.join(' ');
-            }
-            const data = await this.tokenModel.findOne({ sid, accountId, clientId }).select(selectedFields).sort({ createAt: 1 }).exec();
-            return data;
+            Array.isArray(fields) && fields.includes('_id') ? (selectedFields = fields.join(' ')) : (selectedFields += ' ' + fields.join(' '));
+            const query = { accountId, clientId };
+            if (sid)
+                query.sid = sid;
+            if (accountId)
+                query.accountId = accountId;
+            if (clientId)
+                query.clientId = clientId;
+            const token = await this.tokenModel.findOne(query).select(selectedFields).sort({ createAt: 1 }).exec();
+            if (!token)
+                throw new common_1.NotFoundException({ message: 'Token not found' });
+            return token;
         }
         catch (error) {
-            console.error('handleGetTokenbyFields: ', error.message);
-            throw new common_1.InternalServerErrorException('Error finding user');
+            if (error instanceof common_1.NotFoundException)
+                throw error;
+            throw new common_1.InternalServerErrorException({ message: 'Error finding token' });
         }
     }
-    async handleGetAllTokens(limit, lastId, fields) {
+    async handleFindTokens(limit, lastId, fields) {
         try {
             const query = {};
             lastId && (query.id = { $gt: lastId });
             let selectedFields = '-_id';
-            if (Array.isArray(fields) && fields.includes('_id')) {
-                selectedFields = fields.join(' ');
-            }
-            else {
-                selectedFields += ' ' + fields.join(' ');
-            }
+            Array.isArray(fields) && fields.includes('_id') ? (selectedFields = fields.join(' ')) : (selectedFields += ' ' + fields.join(' '));
             const totalRecords = await this.tokenModel.countDocuments(query);
             const tokens = await this.tokenModel.find(query).select(selectedFields).limit(limit).exec();
             return {
@@ -88,35 +88,22 @@ let TokenService = class TokenService {
             };
         }
         catch (error) {
-            console.error('findTokens: ', error.message);
-            throw new common_1.InternalServerErrorException('Error finding user');
+            throw new common_1.InternalServerErrorException({ message: 'Error finding token' });
         }
     }
-    async handleGetToken(_id, fields) {
+    async handleFindOneToken(_id, fields) {
         try {
             let selectedFields = '-_id';
-            if (Array.isArray(fields) && fields.includes('_id')) {
-                selectedFields = fields.join(' ');
-            }
-            else {
-                selectedFields += ' ' + fields.join(' ');
-            }
-            return this.tokenModel.findOne({ _id: _id }).select(selectedFields).exec();
+            Array.isArray(fields) && fields.includes('_id') ? (selectedFields = fields.join(' ')) : (selectedFields += ' ' + fields.join(' '));
+            const token = await this.tokenModel.findOne({ _id: _id }).select(selectedFields).exec();
+            if (!token)
+                throw new common_1.NotFoundException({ message: 'Token not found' });
+            return token;
         }
         catch (error) {
-            console.error('findToken: ', error.message);
-            throw new common_1.InternalServerErrorException('Error finding user');
-        }
-    }
-    async handleDeleteTokenByFields(sid, accountId, clientId) {
-        try {
-            const deletedToken = await this.tokenModel.deleteOne({ sid, accountId, clientId }).exec();
-            if (!deletedToken.acknowledged)
-                throw new common_1.NotFoundException('Token not found or could not be deleted');
-        }
-        catch (error) {
-            console.error('deleteToken: ', error.message);
-            throw new common_1.InternalServerErrorException('Error update token');
+            if (error instanceof common_1.NotFoundException)
+                throw error;
+            throw new common_1.InternalServerErrorException({ message: 'Error finding token' });
         }
     }
     async handleDeleteToken(_id) {
@@ -126,7 +113,32 @@ let TokenService = class TokenService {
                 throw new common_1.NotFoundException('Token not found or could not be deleted');
         }
         catch (error) {
-            console.error('handleDeleteToken: ', error.message);
+            if (error instanceof common_1.NotFoundException)
+                throw error;
+            throw new common_1.InternalServerErrorException({ message: 'Error delete token' });
+        }
+    }
+    async handleDeleteAllTokensByClient(clientId) {
+        try {
+            const deletedToken = await this.tokenModel.deleteMany({ clientId: clientId }).exec();
+            if (!deletedToken.acknowledged)
+                throw new common_1.NotFoundException('Token not found or could not be deleted');
+        }
+        catch (error) {
+            if (error instanceof common_1.NotFoundException)
+                throw error;
+            throw new common_1.InternalServerErrorException({ message: 'Error delete token' });
+        }
+    }
+    async handleDeleteAllTokensByAccountId(accountId) {
+        try {
+            const deletedToken = await this.tokenModel.deleteMany({ accountId: accountId }).exec();
+            if (!deletedToken.acknowledged)
+                throw new common_1.NotFoundException('Token not found or could not be deleted');
+        }
+        catch (error) {
+            if (error instanceof common_1.NotFoundException)
+                throw error;
             throw new common_1.InternalServerErrorException({ message: 'Error delete token' });
         }
     }
@@ -137,46 +149,46 @@ let TokenService = class TokenService {
                 throw new common_1.NotFoundException('Token not found or could not be deleted');
         }
         catch (error) {
-            console.error('handleDeleteAllTokens: ', error.message);
-            throw new common_1.InternalServerErrorException({ message: 'Error delete tokens' });
+            if (error instanceof common_1.NotFoundException)
+                throw error;
+            throw new common_1.InternalServerErrorException({ message: 'Error delete token' });
         }
     }
-    async handleDeleteAllTokensInClient(clientId) {
+    async handleDeleteTokenByFields(sid, accountId, clientId, transaction) {
         try {
-            const deletedToken = await this.tokenModel.deleteMany({ clientId: clientId }).exec();
+            const deletedToken = await this.tokenModel.deleteOne({ sid, accountId, clientId }, { session: transaction }).exec();
             if (!deletedToken.acknowledged)
                 throw new common_1.NotFoundException('Token not found or could not be deleted');
         }
         catch (error) {
-            console.error('deleteToken: ', error.message);
-            throw new common_1.InternalServerErrorException('Error update token');
+            if (error instanceof common_1.NotFoundException)
+                throw error;
+            throw new common_1.InternalServerErrorException({ message: 'Error delete token' });
         }
     }
-    async handleDeleteAllTokensInAccountId(accountId) {
+    async handleUpdateScopeInToken(_id, scope, retrieve = false, transaction) {
         try {
-            const deletedToken = await this.tokenModel.deleteMany({ accountId: accountId }).exec();
-            if (!deletedToken.acknowledged)
-                throw new common_1.NotFoundException('Token not found or could not be deleted');
+            if (retrieve) {
+                const updatedToken = await this.tokenModel.findOneAndUpdate({ _id }, { $set: { scope: scope } }, { new: true, session: transaction });
+                if (!updatedToken)
+                    throw new common_1.NotFoundException('Token not found');
+                return updatedToken;
+            }
+            else {
+                const updateToken = await this.tokenModel.updateOne({ _id }, { $set: { scope: scope } }, { session: transaction });
+                if (updateToken.matchedCount === 0)
+                    throw new common_1.NotFoundException({ message: 'Token or scope not found' });
+                if (updateToken.modifiedCount === 0)
+                    throw new common_1.InternalServerErrorException({ message: 'Token update failed' });
+            }
         }
         catch (error) {
-            console.error('deleteToken: ', error.message);
-            throw new common_1.InternalServerErrorException('Error update token');
+            throw new common_1.InternalServerErrorException({ message: 'Error updating tokens' });
         }
     }
-    async handleUpdateScopeInToken(_id, scope, transaction) {
-        try {
-            const result = await this.tokenModel.updateOne({ _id }, { $set: { scope: scope } }, { session: transaction ? transaction : undefined });
-            return result.acknowledged;
-        }
-        catch (error) {
-            console.error('updateScopeInToken: ', error.message);
-            throw new common_1.InternalServerErrorException('Error updating tokens');
-        }
-    }
-    handleCreateAccessToken(SID, clientId, accountId, scope) {
+    handleCreateAccessToken(clientId, accountId, scope) {
         try {
             const dataAccessToken = {
-                SID: SID,
                 clientId: clientId,
                 accountId: accountId,
                 scope: scope,
@@ -184,16 +196,15 @@ let TokenService = class TokenService {
             };
             const accessToken = this.cryptoService.generateAccessToken(dataAccessToken);
             return {
-                access_token: accessToken,
-                expires_in: contants_1.constants.EXPIRED_ACCESS_TOKEN,
-                token_type: 'Bearer',
+                accessToken: accessToken,
+                expiresIn: contants_1.constants.EXPIRED_ACCESS_TOKEN,
+                tokenType: 'Bearer',
             };
         }
         catch (error) {
             if (error instanceof common_1.NotFoundException || error instanceof common_1.BadRequestException)
                 throw error;
-            console.error('handleCreateAccessToken: ', error.message);
-            throw new common_1.InternalServerErrorException('Error create access tokens');
+            throw new common_1.InternalServerErrorException({ message: 'Error create access tokens' });
         }
     }
     handleCreateIDToken(sub, aud, exp, name, firstName, lastName, picture, accessToken, nonce) {
@@ -217,80 +228,95 @@ let TokenService = class TokenService {
         try {
             if (expiredAt.getTime() - new Date().getTime() > contants_1.constants.MIN_EXPIRED_REFRESH_TOKEN)
                 return false;
-            const result = await this.tokenModel.updateOne({ _id }, { expiredAt: Date.now() + contants_1.constants.EXPIRED_REFRESH_TOKEN * 1000 }, { session: transaction ? transaction : undefined });
+            const result = await this.tokenModel.updateOne({ _id }, { expiredAt: Date.now() + contants_1.constants.EXPIRED_REFRESH_TOKEN * 1000 }, { session: transaction });
             return result.acknowledged;
         }
         catch (error) {
-            console.error('updateExpiredToken: ', error.message);
-            throw new common_1.InternalServerErrorException('Error updating tokens');
+            throw new common_1.InternalServerErrorException({ message: 'Error updating tokens' });
         }
     }
     async handleGetAccessTokenByAuthorizationCodeGrant(clientId, clientSecret, code, redirectUri) {
+        const transaction = await this.connection.startSession();
+        transaction.startTransaction();
         try {
             this.cryptoService.decrypt(code);
             const dataStr = await this.cacheManager.get(code);
             if (!dataStr)
-                throw new common_1.NotFoundException('Code does not exist.');
+                throw new common_1.NotFoundException({ message: 'Code does not exist.' });
             const { sid, accountId, scope, accessType, nonce } = JSON.parse(dataStr);
-            const token = accessType ? await this.handleGetTokenByFields(sid, accountId, clientId, ['_id', 'scope']) : undefined;
-            const session = await this.sessionService.handleGetSession(sid, ['_id']);
-            if (!session)
-                throw new common_1.NotFoundException('Session not found');
-            const user = await this.userService.handleGetUser(accountId, ['_id', 'name', 'clientId']);
-            if (!user)
-                throw new common_1.NotFoundException('User not found');
-            const client = await this.clientService.handleGetClient(clientId, ['clientSecret', 'redirectUris']);
+            await this.sessionService.handleFindOneSession(sid, ['_id']);
+            const account = await this.accountService.handleFindOneAccount(accountId, ['_id', 'name', 'clientId']);
+            const client = await this.clientService.handleFindOneClient(clientId, ['_id', 'clientSecret', 'redirectUris']);
             if (clientSecret !== client.clientSecret)
-                throw new common_1.UnauthorizedException('Invalid client secret');
+                throw new common_1.UnauthorizedException({ message: 'Invalid client secret' });
             if (!client.redirectUris.includes(redirectUri))
-                throw new common_1.BadRequestException('Invalid redirect URI');
-            const { access_token, expires_in, token_type } = this.handleCreateAccessToken(sid, client._id, user._id, scope);
+                throw new common_1.BadRequestException({ message: 'Invalid redirect URI' });
+            const token = accessType === common_2.EAccessType.OFFLINE
+                ? await (async () => {
+                    try {
+                        const token = await this.handleFindOneTokenByFields(sid, account._id, client._id, ['_id', 'scope', 'expiredAt']);
+                        return token;
+                    }
+                    catch (error) {
+                        return undefined;
+                    }
+                })()
+                : undefined;
+            const checkScope = token ? [...scope].sort().every((val, index) => val === [...token.scope].sort()[index]) : undefined;
+            const refreshToken = accessType === common_2.EAccessType.OFFLINE
+                ? token
+                    ? await Promise.all([
+                        !checkScope ? this.handleUpdateScopeInToken(token._id, scope, false, transaction) : undefined,
+                        this.handleUpdateExpiredInToken(token._id, token.expiredAt, transaction),
+                    ]).then(() => token)
+                    : await this.handleSaveToken(sid, client._id, account._id, scope, contants_1.constants.EXPIRED_REFRESH_TOKEN)
+                : undefined;
+            const { accessToken, expiresIn, tokenType } = this.handleCreateAccessToken(client._id, account._id, scope);
             const id_token = scope.includes(common_2.EScope.OPENID)
-                ? this.handleCreateIDToken(user.email, clientId, contants_1.constants.EXPIRED_ID_TOKEN, user.name, user.firstName, user.lastName, user.picture, access_token, nonce)
-                : {};
+                ? this.handleCreateIDToken(account.email, clientId, contants_1.constants.EXPIRED_ID_TOKEN, account.name, account.firstName, account.lastName, account.picture, accessToken, nonce)
+                : undefined;
+            await transaction.commitTransaction();
             return {
-                access_token: access_token,
-                expires_in: expires_in,
-                ...(accessType === common_2.EAccessType.OFFLINE && { refresh_token: token._id }),
+                access_token: accessToken,
+                expires_in: expiresIn,
+                ...(refreshToken && { refresh_token: refreshToken._id }),
                 ...(id_token && { id_token }),
                 scope: scope.join(' '),
-                token_type: token_type,
+                token_type: tokenType,
             };
         }
         catch (error) {
+            await transaction.abortTransaction();
             if (error instanceof common_1.NotFoundException || error instanceof common_1.BadRequestException || error instanceof common_1.UnauthorizedException)
                 throw error;
-            console.error('handleGetAccessTokenByAuthorizationCodeGrant: ', error.message);
-            throw new common_1.InternalServerErrorException('Error get token');
+            throw new common_1.InternalServerErrorException({ message: 'Error creating token' });
+        }
+        finally {
+            transaction.endSession();
         }
     }
     async handleGetAccessTokenByRefreshTokenGrant(clientId, clientSecret, refreshToken, redirectUri) {
         try {
-            const tokenData = await this.handleGetToken(refreshToken, ['_id', 'accountId', 'scope', 'expiredAt']);
-            if (!tokenData)
-                throw new common_1.UnauthorizedException('Invalid or expired refresh token');
-            const user = await this.userService.handleGetUser(tokenData.accountId, ['_id', 'name', 'clientId']);
-            if (!user)
-                throw new common_1.NotFoundException('User not found');
-            await this.handleUpdateExpiredInToken(tokenData._id, tokenData.expiredAt);
-            const client = await this.clientService.handleGetClient(clientId, ['clientSecret', 'redirectUris']);
+            const token = await this.handleFindOneToken(refreshToken, ['_id', 'accountId', 'scope', 'expiredAt']);
+            const account = await this.accountService.handleFindOneAccount(token.accountId, ['_id', 'name', 'clientId']);
+            await this.handleUpdateExpiredInToken(token._id, token.expiredAt);
+            const client = await this.clientService.handleFindOneClient(clientId, ['clientSecret', 'redirectUris']);
             if (clientSecret !== client.clientSecret)
                 throw new common_1.UnauthorizedException('Invalid client secret');
             if (!client.redirectUris.includes(redirectUri))
                 throw new common_1.BadRequestException('Invalid redirect URI');
-            const { access_token, expires_in, token_type } = this.handleCreateAccessToken(tokenData.sid, client._id, user._id, tokenData.scope);
+            const { accessToken, expiresIn, tokenType } = this.handleCreateAccessToken(client._id, account._id, token.scope);
             return {
-                access_token: access_token,
-                expires_in: expires_in,
-                scope: tokenData.scope.join(' '),
-                token_type: token_type,
+                access_token: accessToken,
+                expires_in: expiresIn,
+                scope: token.scope.join(' '),
+                token_type: tokenType,
             };
         }
         catch (error) {
             if (error instanceof common_1.NotFoundException || error instanceof common_1.BadRequestException || error instanceof common_1.UnauthorizedException)
                 throw error;
-            console.error('handleGetNewAccessTokenOfClient: ', error.message);
-            throw new common_1.InternalServerErrorException('Error updating tokens');
+            throw new common_1.InternalServerErrorException({ message: 'Error updating tokens' });
         }
     }
 };
@@ -298,13 +324,16 @@ exports.TokenService = TokenService;
 exports.TokenService = TokenService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, mongoose_2.InjectModel)(token_schema_1.Token.name)),
-    __param(6, (0, common_1.Inject)(cache_manager_1.CACHE_MANAGER)),
+    __param(1, (0, common_1.Inject)((0, common_1.forwardRef)(() => account_service_1.AccountService))),
+    __param(6, (0, mongoose_2.InjectConnection)()),
+    __param(7, (0, common_1.Inject)(cache_manager_1.CACHE_MANAGER)),
     __metadata("design:paramtypes", [mongoose_1.Model,
-        user_service_1.UserService,
+        account_service_1.AccountService,
         client_service_1.ClientService,
         session_service_1.SessionService,
         common_2.CryptoService,
         jwt_1.JwtService,
+        mongoose_1.Connection,
         cache_manager_1.Cache])
 ], TokenService);
 //# sourceMappingURL=token.service.js.map

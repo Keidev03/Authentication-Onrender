@@ -6,6 +6,7 @@ export declare class CryptoService {
     private secretKey;
     private ivKey;
     private readonly algorithm;
+    private readonly logger;
     constructor(configService: ConfigService);
     calculateAtHash(token: string): string;
     private toBase64Url;
@@ -18,10 +19,8 @@ export declare class CryptoService {
     }): string;
     validateSignature(tokenURIComponent: string): Record<any, string> | null;
     generateAccessToken(payload: {
-        exp: number;
+        exp?: number;
         [key: string]: any;
     }): string;
     validateAccessToken(tokenURIComponent: string): Record<any, any> | null;
-    encodeAIS(ids: string[]): string;
-    decodeAIS(encodedString: string): string[];
 }

@@ -13,9 +13,9 @@ exports.TokenSchema = exports.Token = void 0;
 const mongoose_1 = require("@nestjs/mongoose");
 const mongoose_2 = require("mongoose");
 const session_schema_1 = require("../Session/session.schema");
-const user_schema_1 = require("../User/user.schema");
 const client_schema_1 = require("../Client/client.schema");
 const common_1 = require("../../common");
+const account_schema_1 = require("../Account/account.schema");
 let Token = class Token {
 };
 exports.Token = Token;
@@ -41,7 +41,7 @@ __decorate([
         type: mongoose_2.Types.ObjectId,
         index: true,
         required: true,
-        ref: user_schema_1.User.name,
+        ref: account_schema_1.Account.name,
     }),
     __metadata("design:type", mongoose_2.Types.ObjectId)
 ], Token.prototype, "accountId", void 0);

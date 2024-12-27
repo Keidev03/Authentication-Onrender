@@ -8,14 +8,16 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var MailerService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.MailerService = void 0;
 const nodemailer = require("nodemailer");
 const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
-let MailerService = class MailerService {
+let MailerService = MailerService_1 = class MailerService {
     constructor(configService) {
         this.configService = configService;
+        this.logger = new common_1.Logger(MailerService_1.name);
         this.user = this.configService.get('MAIL_SEND');
         this.password = this.configService.get('MAIL_PASSWORD');
         this.mailsend = this.configService.get('MAIL_SEND');
@@ -34,18 +36,17 @@ let MailerService = class MailerService {
             subject: subject,
             html: htmlMailForm,
         };
-        mailTransporter.sendMail(mailOptions, function (error, info) {
-            if (error) {
-                console.log(error);
-            }
-            else {
-                console.log('Email sent: ' + info.response);
-            }
-        });
+        try {
+            const info = await mailTransporter.sendMail(mailOptions);
+            this.logger.log('Email sent: ' + info.response);
+        }
+        catch (error) {
+            this.logger.error('Send email with error:', error.stack);
+        }
     }
 };
 exports.MailerService = MailerService;
-exports.MailerService = MailerService = __decorate([
+exports.MailerService = MailerService = MailerService_1 = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [config_1.ConfigService])
 ], MailerService);

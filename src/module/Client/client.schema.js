@@ -12,8 +12,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ClientSchema = exports.Client = void 0;
 const mongoose_1 = require("@nestjs/mongoose");
 const mongoose_2 = require("mongoose");
-const user_schema_1 = require("../User/user.schema");
 const common_1 = require("../../common");
+const account_schema_1 = require("../Account/account.schema");
 let Client = class Client {
 };
 exports.Client = Client;
@@ -30,11 +30,11 @@ __decorate([
     __metadata("design:type", Boolean)
 ], Client.prototype, "active", void 0);
 __decorate([
-    (0, mongoose_1.Prop)({ type: [mongoose_2.Types.ObjectId], index: true, ref: user_schema_1.User.name, required: true }),
+    (0, mongoose_1.Prop)({ type: mongoose_2.Types.ObjectId, index: true, ref: account_schema_1.Account.name, required: true }),
     __metadata("design:type", mongoose_2.Types.ObjectId)
 ], Client.prototype, "owner", void 0);
 __decorate([
-    (0, mongoose_1.Prop)({ type: [mongoose_2.Types.ObjectId], index: true, ref: user_schema_1.User.name }),
+    (0, mongoose_1.Prop)({ type: [mongoose_2.Types.ObjectId], index: true, ref: account_schema_1.Account.name }),
     __metadata("design:type", Array)
 ], Client.prototype, "editor", void 0);
 __decorate([
@@ -44,7 +44,7 @@ __decorate([
         default: [common_1.EScope.PROFILE],
     }),
     __metadata("design:type", Array)
-], Client.prototype, "scope", void 0);
+], Client.prototype, "scopes", void 0);
 __decorate([
     (0, mongoose_1.Prop)({ type: String }),
     __metadata("design:type", String)

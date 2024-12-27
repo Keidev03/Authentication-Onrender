@@ -8,6 +8,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var GoogleDriveService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.GoogleDriveService = void 0;
 const googleapis_1 = require("googleapis");
@@ -16,15 +17,16 @@ const Jimp = require("jimp");
 const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
 const path_1 = require("path");
-let GoogleDriveService = class GoogleDriveService {
+let GoogleDriveService = GoogleDriveService_1 = class GoogleDriveService {
     constructor(configService) {
         this.configService = configService;
+        this.logger = new common_1.Logger(GoogleDriveService_1.name);
         this.drive = this.initDrive();
     }
     initDrive() {
         const auth = new googleapis_1.google.auth.GoogleAuth({
             keyFile: (0, path_1.resolve)('secret.json'),
-            scopes: this.configService.get('DRIVE_SCOPE'),
+            scopes: ['https://www.googleapis.com/auth/drive'],
         });
         return googleapis_1.google.drive({ version: 'v3', auth: auth });
     }
@@ -39,14 +41,21 @@ let GoogleDriveService = class GoogleDriveService {
             });
         }
         catch (error) {
-            console.error('Error making file public: ', error.message);
+            this.logger.error('Error making file public: ', error.stack);
             throw new common_1.InternalServerErrorException(error.message);
         }
     }
-    async UploadImage(fileImage, nameImage, width, height, idFolder) {
+    async UploadImage(fileImage, nameImage, width, height, maxFileSizeKB = 500, idFolder) {
         try {
             const image = await Jimp.read(fileImage.buffer);
-            const buffer = await image.resize(width, height).getBufferAsync(Jimp.MIME_JPEG);
+            let quality = 100;
+            let buffer;
+            do {
+                buffer = await image.resize(width, height).quality(quality).getBufferAsync(Jimp.MIME_JPEG);
+                if (buffer.length <= maxFileSizeKB * 1024)
+                    break;
+                quality -= 5;
+            } while (quality > 10);
             const bufferStream = new stream.PassThrough();
             bufferStream.end(buffer);
             const response = await this.drive.files.create({
@@ -64,7 +73,7 @@ let GoogleDriveService = class GoogleDriveService {
             return idImage;
         }
         catch (error) {
-            console.log(error.message);
+            this.logger.error(error.message);
             throw new common_1.InternalServerErrorException(error.message);
         }
     }
@@ -73,13 +82,12 @@ let GoogleDriveService = class GoogleDriveService {
             await this.drive.files.delete({ fileId: id });
         }
         catch (error) {
-            console.error('Error deleting file: ', error.message);
-            throw new common_1.InternalServerErrorException(error.message);
+            this.logger.error('Error deleting file: ', error.message);
         }
     }
 };
 exports.GoogleDriveService = GoogleDriveService;
-exports.GoogleDriveService = GoogleDriveService = __decorate([
+exports.GoogleDriveService = GoogleDriveService = GoogleDriveService_1 = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [config_1.ConfigService])
 ], GoogleDriveService);

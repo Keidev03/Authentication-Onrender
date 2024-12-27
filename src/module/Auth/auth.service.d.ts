@@ -1,34 +1,21 @@
 import { Connection, Types } from 'mongoose';
 import { CryptoService, IUserAgentInfo } from '../../common';
-import { UserService } from '../User/user.service';
-import { TokenService } from '../Token/token.service';
 import { SessionService } from '../Session/session.service';
+import { SessionDocument } from '../Session/session.schema';
+import { AccountService } from '../Account/account.service';
 export declare class AuthService {
-    private readonly userService;
+    private readonly accountService;
     private readonly sessionService;
-    private readonly tokenService;
     private readonly cryptoService;
     private readonly connection;
-    constructor(userService: UserService, sessionService: SessionService, tokenService: TokenService, cryptoService: CryptoService, connection: Connection);
+    constructor(accountService: AccountService, sessionService: SessionService, cryptoService: CryptoService, connection: Connection);
     handleIdentifier(email: string, useragent: IUserAgentInfo): Promise<string>;
-    handleGetAccountsSID(sidStr: string, aisStr: string): Promise<{
-        data: {
-            sub: string;
-            email: string;
-            name: string;
-            picture: string;
-            signed_out: boolean;
-        }[];
-        newAIS: string;
-    }>;
-    handleSignoutOfAllAccounts(sidStr: string): Promise<void>;
-    handleSigninWithSID(accountId: Types.ObjectId, sidStr: string): Promise<void>;
-    handleSigninWithPassword(accountId: Types.ObjectId, password: string, os: string, device: string, browser: string, ip: string, sidStr: string, aisStr?: string): Promise<{
+    handleGetAccountsSID(sidStr: string): Promise<any>;
+    handleSigninWithSID(authuser: number, sidStr: string): Promise<void>;
+    handleSigninWithPassword(accountId: Types.ObjectId, password: string, os: string, device: string, browser: string, ip: string, sidStr: string): Promise<{
         newSID: string;
-        newAIS: string;
     }>;
-    handleRemoveAccountSessionClient(accountId: Types.ObjectId, sidStr: string, aisStr: string): Promise<{
-        newAccounts: string[];
-        newAisStr: string;
-    }>;
+    handleSignOut(accountId: Types.ObjectId, sidStr: string): Promise<void>;
+    handleSignoutAllAccounts(sidStr: string): Promise<void>;
+    handleRemoveAccountInSession(authuser: number, sidStr: string): Promise<SessionDocument>;
 }

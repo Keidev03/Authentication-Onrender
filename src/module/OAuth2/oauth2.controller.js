@@ -18,34 +18,33 @@ const throttler_1 = require("@nestjs/throttler");
 const common_2 = require("../../common");
 const dto_1 = require("./dto");
 const oauth2_service_1 = require("./oauth2.service");
-const oauth2Body_dto_1 = require("./dto/oauth2Body.dto");
 let OAuth2Controller = class OAuth2Controller {
     constructor(oauth2Service, cryptoService) {
         this.oauth2Service = oauth2Service;
         this.cryptoService = cryptoService;
     }
     async postOAuth2SigninSession(query, body, sidStr) {
-        if ((query.response_type.includes(common_2.EResponseType.ID_TOKEN) || query.scope.includes(common_2.EScope.OPENID)) && !query.nonce) {
+        if ((query.responseType.includes(common_2.EResponseType.ID_TOKEN) || query.scope.includes(common_2.EScope.OPENID)) && !query.nonce) {
             throw new common_1.BadRequestException({
                 error: 'invalid_request',
                 error_description: 'The "nonce" parameter is required when requesting an ID token.',
             });
         }
-        const data = await this.oauth2Service.handleSigninWithSID(body.sub, query.client_id, query.redirect_uri, query.response_type, query.scope, query.access_type, query.prompt, query.nonce, query.state, sidStr);
+        const data = await this.oauth2Service.handleSigninWithSID(body.authuser, query.clientId, query.redirectUri, query.responseType, query.scope, query.accessType, query.prompt, query.nonce, query.state, sidStr);
         return {
-            uri: query.redirect_uri,
-            client_name: data.client_name,
-            client_picture: data.client_picture,
+            uri: query.redirectUri,
+            clientName: data.clientName,
+            clientPicture: data.clientPicture,
             email: data.email,
             picture: data.picture,
             consent: data.consent,
-            ...(query.response_mode === common_2.EResponseMode.QUERY && { query: this.oauth2Service.buildResponse(data, query.state, query.scope, query.prompt) }),
-            ...(query.response_mode === common_2.EResponseMode.FRAGMENT && { fragment: this.oauth2Service.buildResponse(data, query.state, query.scope, query.prompt) }),
-            ...(query.response_mode === common_2.EResponseMode.FORM_POST && { form: this.oauth2Service.buildResponse(data, query.state, query.scope, query.prompt) }),
+            ...(query.responseMode === common_2.EResponseMode.QUERY && { query: this.oauth2Service.buildResponse(data, query.state, query.scope, query.prompt) }),
+            ...(query.responseMode === common_2.EResponseMode.FRAGMENT && { fragment: this.oauth2Service.buildResponse(data, query.state, query.scope, query.prompt) }),
+            ...(query.responseMode === common_2.EResponseMode.FORM_POST && { form: this.oauth2Service.buildResponse(data, query.state, query.scope, query.prompt) }),
         };
     }
-    async postOAuth2SigninPassword(query, body, sidStr, aisStr, useragent, response) {
-        if ((query.response_type.includes(common_2.EResponseType.ID_TOKEN) || query.scope.includes(common_2.EScope.OPENID)) && !query.nonce) {
+    async postOAuth2SigninPassword(query, body, sidStr, useragent, response) {
+        if ((query.responseType.includes(common_2.EResponseType.ID_TOKEN) || query.scope.includes(common_2.EScope.OPENID)) && !query.nonce) {
             throw new common_1.BadRequestException({
                 error: 'invalid_request',
                 error_description: 'The "nonce" parameter is required when requesting an ID token.',
@@ -54,19 +53,18 @@ let OAuth2Controller = class OAuth2Controller {
         const TLDecrypt = this.cryptoService.validateAccessToken(body.TL);
         if (!TLDecrypt || useragent.browser !== TLDecrypt.browser || useragent.device !== TLDecrypt.device || useragent.os !== TLDecrypt.os || useragent.ip !== TLDecrypt.ip)
             throw new common_1.BadRequestException('Detected');
-        const data = await this.oauth2Service.handleSigninWithPassword(TLDecrypt.accountId, body.password, query.client_id, query.redirect_uri, query.response_type, query.scope, query.access_type, query.prompt, query.nonce, query.state, TLDecrypt.os, TLDecrypt.device, TLDecrypt.browser, TLDecrypt.ip, sidStr, aisStr);
+        const data = await this.oauth2Service.handleSigninWithPassword(TLDecrypt.accountId, body.password, query.clientId, query.redirectUri, query.responseType, query.scope, query.accessType, query.prompt, query.nonce, query.state, TLDecrypt.os, TLDecrypt.device, TLDecrypt.browser, TLDecrypt.ip, sidStr);
         response.cookie('SID', data.newSID, { maxAge: common_2.constants.EXPIRED_SID * 1000, httpOnly: true, path: '/' });
-        response.cookie('AIS', data.newAIS, { maxAge: common_2.constants.EXPIRED_SID * 1000, httpOnly: true, path: '/' });
         const payload = {
-            uri: data.redirect_uri,
-            clientName: data.client_name,
-            clientPicture: data.client_picture,
+            uri: data.redirectUri,
+            clientName: data.clientName,
+            clientPicture: data.clientPicture,
             email: data.email,
             picture: data.picture,
             consent: data.consent,
-            ...(query.response_mode === common_2.EResponseMode.QUERY && { query: this.oauth2Service.buildResponse(data, query.state, query.scope, query.prompt) }),
-            ...(query.response_mode === common_2.EResponseMode.FRAGMENT && { fragment: this.oauth2Service.buildResponse(data, query.state, query.scope, query.prompt) }),
-            ...(query.response_mode === common_2.EResponseMode.FORM_POST && { form: this.oauth2Service.buildResponse(data, query.state, query.scope, query.prompt) }),
+            ...(query.responseMode === common_2.EResponseMode.QUERY && { query: this.oauth2Service.buildResponse(data, query.state, query.scope, query.prompt) }),
+            ...(query.responseMode === common_2.EResponseMode.FRAGMENT && { fragment: this.oauth2Service.buildResponse(data, query.state, query.scope, query.prompt) }),
+            ...(query.responseMode === common_2.EResponseMode.FORM_POST && { form: this.oauth2Service.buildResponse(data, query.state, query.scope, query.prompt) }),
         };
         return response.json(payload);
     }
@@ -79,7 +77,7 @@ __decorate([
     __param(1, (0, common_1.Body)()),
     __param(2, (0, common_2.Cookies)('SID')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [dto_1.DOAuth2Query, oauth2Body_dto_1.DOAuth2BodySession, String]),
+    __metadata("design:paramtypes", [dto_1.DOAuth2Query, dto_1.DOAuth2BodySession, String]),
     __metadata("design:returntype", Promise)
 ], OAuth2Controller.prototype, "postOAuth2SigninSession", null);
 __decorate([
@@ -89,12 +87,11 @@ __decorate([
     __param(0, (0, common_1.Query)()),
     __param(1, (0, common_1.Body)()),
     __param(2, (0, common_2.Cookies)('SID')),
-    __param(3, (0, common_2.Cookies)('AIS')),
-    __param(4, (0, common_2.UserAgent)()),
-    __param(5, (0, common_1.Res)()),
+    __param(3, (0, common_2.UserAgent)()),
+    __param(4, (0, common_1.Res)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [dto_1.DOAuth2Query,
-        oauth2Body_dto_1.DOAuth2BodyPassword, String, String, Object, Object]),
+        dto_1.DOAuth2BodyPassword, String, Object, Object]),
     __metadata("design:returntype", Promise)
 ], OAuth2Controller.prototype, "postOAuth2SigninPassword", null);
 exports.OAuth2Controller = OAuth2Controller = __decorate([
