@@ -26,7 +26,7 @@ import { ClientSession, Connection, Model, Types } from 'mongoose';
 import { Cache } from '@nestjs/cache-manager';
 import { JwtService } from '@nestjs/jwt';
 import { Token, TokenDocument, TokenFields } from './token.schema';
-import { CryptoService, EScope } from '../../common';
+import { CryptoService, EOAuth2Scope } from '../../common';
 import { ClientService } from '../Client/client.service';
 import { SessionService } from '../Session/session.service';
 import { AccountService } from '../Account/account.service';
@@ -40,7 +40,7 @@ export declare class TokenService {
     private readonly connection;
     private readonly cacheManager;
     constructor(tokenModel: Model<TokenDocument>, accountService: AccountService, clientService: ClientService, sessionService: SessionService, cryptoService: CryptoService, jwtService: JwtService, connection: Connection, cacheManager: Cache);
-    handleSaveToken(sid: string, clientId: Types.ObjectId, accountId: Types.ObjectId, scope: EScope[], expireafterSeconds: number, transaction?: ClientSession): Promise<TokenDocument>;
+    handleSaveToken(sid: string, clientId: Types.ObjectId, accountId: Types.ObjectId, scope: EOAuth2Scope[], expireafterSeconds: number, transaction?: ClientSession): Promise<TokenDocument>;
     handleFindOneTokenByFields(sid: string | undefined, accountId: Types.ObjectId | undefined, clientId: Types.ObjectId | undefined, fields?: Array<TokenFields>): Promise<TokenDocument>;
     handleFindTokens(limit: number, lastId: Types.ObjectId | undefined, fields?: Array<TokenFields>): Promise<{
         tokens: TokenDocument[];
@@ -52,19 +52,19 @@ export declare class TokenService {
     handleDeleteAllTokensByAccountId(accountId: Types.ObjectId): Promise<void>;
     handleDeleteAllTokensByFields(sid: string, accountId: Types.ObjectId, clientId: Types.ObjectId): Promise<void>;
     handleDeleteTokenByFields(sid: string, accountId: Types.ObjectId, clientId: Types.ObjectId, transaction?: ClientSession): Promise<void>;
-    handleUpdateScopeInToken(_id: string, scope: EScope[], retrieve?: boolean, transaction?: ClientSession): Promise<import("mongoose").Document<unknown, {}, TokenDocument> & import("mongoose").Document<unknown, {}, Token> & Token & Required<{
+    handleUpdatEOAuth2ScopeInToken(_id: string, scope: EOAuth2Scope[], retrieve?: boolean, transaction?: ClientSession): Promise<import("mongoose").Document<unknown, {}, TokenDocument> & import("mongoose").Document<unknown, {}, Token> & Token & Required<{
         _id: string;
     }> & {
         createdAt: Date;
         updatedAt: Date;
     }>;
-    handleCreateAccessToken(clientId: Types.ObjectId, accountId: Types.ObjectId, scope: EScope[]): {
+    handleCreateAccessToken(clientId: Types.ObjectId, accountId: Types.ObjectId, scope: EOAuth2Scope[]): {
         accessToken: string;
         expiresIn: number;
         tokenType: string;
     };
     handleCreateIDToken(sub: string, aud: Types.ObjectId, exp: number, name: string, firstName: string, lastName: string, picture: string, accessToken: string, nonce: string): string;
-    handleUpdateExpiredInToken(_id: string, expiredAt: Date, transaction?: ClientSession): Promise<boolean>;
+    handleUpdateExpired(_id: string, expiredAt: Date, transaction?: ClientSession): Promise<boolean>;
     handleGetAccessTokenByAuthorizationCodeGrant(clientId: Types.ObjectId, clientSecret: string, code: string, redirectUri: string): Promise<{
         access_token: string;
         expires_in: number;

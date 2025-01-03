@@ -13,6 +13,7 @@ exports.SessionSchema = exports.Session = void 0;
 const mongoose_1 = require("@nestjs/mongoose");
 const mongoose_2 = require("mongoose");
 const account_schema_1 = require("../Account/account.schema");
+const common_1 = require("../../common");
 let Session = class Session {
 };
 exports.Session = Session;
@@ -42,21 +43,15 @@ __decorate([
             {
                 _id: { type: mongoose_2.Types.ObjectId, ref: account_schema_1.Account.name, required: true },
                 primary: { type: Boolean },
-                signedOut: { type: Boolean, default: false },
+                state: { type: String, enum: common_1.EAuthState },
             },
         ],
         index: true,
-        validate: {
-            validator: function (value) {
-                return value.length <= 2;
-            },
-            message: 'linkedAccountIds array cannot have more than 10 elements.',
-        },
     }),
     __metadata("design:type", Array)
 ], Session.prototype, "linkedAccountIds", void 0);
 __decorate([
-    (0, mongoose_1.Prop)({ type: Date, index: { expires: '30d' } }),
+    (0, mongoose_1.Prop)({ type: Date, index: { expires: '0' } }),
     __metadata("design:type", Date)
 ], Session.prototype, "expiredAt", void 0);
 exports.Session = Session = __decorate([

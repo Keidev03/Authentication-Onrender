@@ -9,10 +9,9 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.DAccountBodyPost = exports.IsPhoneNumber = exports.MatchPasswordConstraint = void 0;
+exports.DAccountBodyPost = exports.MatchPasswordConstraint = void 0;
 const class_transformer_1 = require("class-transformer");
 const class_validator_1 = require("class-validator");
-const libphonenumber_js_1 = require("libphonenumber-js");
 let MatchPasswordConstraint = class MatchPasswordConstraint {
     validate(confirm, args) {
         const [relatedPropertyName] = args.constraints;
@@ -27,33 +26,6 @@ exports.MatchPasswordConstraint = MatchPasswordConstraint;
 exports.MatchPasswordConstraint = MatchPasswordConstraint = __decorate([
     (0, class_validator_1.ValidatorConstraint)({ name: 'MatchPassword', async: false })
 ], MatchPasswordConstraint);
-function IsPhoneNumber(validationOptions) {
-    return function (object, propertyName) {
-        (0, class_validator_1.registerDecorator)({
-            name: 'isPhoneNumber',
-            target: object.constructor,
-            propertyName: propertyName,
-            options: validationOptions,
-            validator: {
-                validate(value, args) {
-                    if (typeof value !== 'string')
-                        return false;
-                    try {
-                        const phoneNumber = (0, libphonenumber_js_1.default)(value);
-                        return phoneNumber?.isValid() || false;
-                    }
-                    catch {
-                        return false;
-                    }
-                },
-                defaultMessage() {
-                    return 'Invalid phone number';
-                },
-            },
-        });
-    };
-}
-exports.IsPhoneNumber = IsPhoneNumber;
 class DAccountBodyPost {
 }
 exports.DAccountBodyPost = DAccountBodyPost;
@@ -78,12 +50,6 @@ __decorate([
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], DAccountBodyPost.prototype, "gender", void 0);
-__decorate([
-    (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsString)(),
-    IsPhoneNumber({ message: 'Invalid international phone number format' }),
-    __metadata("design:type", String)
-], DAccountBodyPost.prototype, "phone", void 0);
 __decorate([
     (0, class_validator_1.IsEmail)(),
     __metadata("design:type", String)

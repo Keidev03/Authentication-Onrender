@@ -48,8 +48,8 @@ __decorate([
 __decorate([
     (0, mongoose_1.Prop)({
         type: [String],
-        enum: common_1.EScope,
-        default: [common_1.EScope.PROFILE],
+        enum: common_1.EOAuth2Scope,
+        default: [common_1.EOAuth2Scope.PROFILE],
     }),
     __metadata("design:type", Array)
 ], Token.prototype, "scope", void 0);

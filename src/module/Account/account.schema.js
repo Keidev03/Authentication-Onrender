@@ -13,6 +13,7 @@ exports.AccountSchema = exports.Account = void 0;
 const mongoose_1 = require("@nestjs/mongoose");
 const mongoose_2 = require("mongoose");
 const common_1 = require("../../common");
+const location_account_enum_1 = require("../../common/enums/account/location.account.enum");
 let Account = class Account {
 };
 exports.Account = Account;
@@ -42,13 +43,9 @@ __decorate([
     __metadata("design:type", String)
 ], Account.prototype, "password", void 0);
 __decorate([
-    (0, mongoose_1.Prop)({ type: [String], enum: common_1.ERoles, default: [common_1.ERoles.USER] }),
+    (0, mongoose_1.Prop)({ type: [String], enum: common_1.EAccountRoles, default: [common_1.EAccountRoles.USER] }),
     __metadata("design:type", Array)
 ], Account.prototype, "roles", void 0);
-__decorate([
-    (0, mongoose_1.Prop)({ type: Boolean, default: false }),
-    __metadata("design:type", Boolean)
-], Account.prototype, "verified", void 0);
 __decorate([
     (0, mongoose_1.Prop)({ type: Date }),
     __metadata("design:type", Date)
@@ -58,7 +55,7 @@ __decorate([
     __metadata("design:type", String)
 ], Account.prototype, "gender", void 0);
 __decorate([
-    (0, mongoose_1.Prop)({ type: String, required: true }),
+    (0, mongoose_1.Prop)({ type: String }),
     __metadata("design:type", String)
 ], Account.prototype, "phone", void 0);
 __decorate([
@@ -66,17 +63,33 @@ __decorate([
     __metadata("design:type", String)
 ], Account.prototype, "address", void 0);
 __decorate([
-    (0, mongoose_1.Prop)({ type: String }),
+    (0, mongoose_1.Prop)({ type: String, enum: location_account_enum_1.EAccountLocation, default: location_account_enum_1.EAccountLocation.USA }),
     __metadata("design:type", String)
 ], Account.prototype, "location", void 0);
 __decorate([
-    (0, mongoose_1.Prop)({ type: String, default: null }),
+    (0, mongoose_1.Prop)({ type: String, enum: common_1.EAccountLanguage, default: common_1.EAccountLanguage.English_US }),
+    __metadata("design:type", String)
+], Account.prototype, "language", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: String }),
     __metadata("design:type", String)
 ], Account.prototype, "picture", void 0);
 __decorate([
     (0, mongoose_1.Prop)({ type: [mongoose_2.Types.ObjectId], ref: 'Client' }),
     __metadata("design:type", Array)
 ], Account.prototype, "clientId", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: String, enum: common_1.EAccountState, default: common_1.EAccountState.ACTIVE }),
+    __metadata("design:type", String)
+], Account.prototype, "state", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: String, enum: common_1.EAccountVerification, default: common_1.EAccountVerification.UNVERIFIED }),
+    __metadata("design:type", String)
+], Account.prototype, "verification", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: String, enum: common_1.EAccountProcessing, default: common_1.EAccountProcessing.NONE }),
+    __metadata("design:type", String)
+], Account.prototype, "processing", void 0);
 __decorate([
     (0, mongoose_1.Prop)({ type: Date, index: { expires: '0' } }),
     __metadata("design:type", Date)

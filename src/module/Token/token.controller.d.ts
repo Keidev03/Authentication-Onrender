@@ -1,9 +1,9 @@
 import { TokenService } from './token.service';
-import { DGetAccessToken } from './dto/getAccessToken.dto';
+import { DTokenOAuth2Query } from './dto/tokenOAuth2Query';
 export declare class TokenController {
     private readonly tokenService;
     constructor(tokenService: TokenService);
-    getAccessToken(body: DGetAccessToken): Promise<{
+    getAccessToken(body: DTokenOAuth2Query): Promise<{
         access_token: string;
         expires_in: number;
         scope: string;

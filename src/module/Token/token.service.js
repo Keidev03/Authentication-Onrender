@@ -166,7 +166,7 @@ let TokenService = class TokenService {
             throw new common_1.InternalServerErrorException({ message: 'Error delete token' });
         }
     }
-    async handleUpdateScopeInToken(_id, scope, retrieve = false, transaction) {
+    async handleUpdatEOAuth2ScopeInToken(_id, scope, retrieve = false, transaction) {
         try {
             if (retrieve) {
                 const updatedToken = await this.tokenModel.findOneAndUpdate({ _id }, { $set: { scope: scope } }, { new: true, session: transaction });
@@ -224,7 +224,7 @@ let TokenService = class TokenService {
         };
         return this.jwtService.sign(payload);
     }
-    async handleUpdateExpiredInToken(_id, expiredAt, transaction) {
+    async handleUpdateExpired(_id, expiredAt, transaction) {
         try {
             if (expiredAt.getTime() - new Date().getTime() > contants_1.constants.MIN_EXPIRED_REFRESH_TOKEN)
                 return false;
@@ -251,7 +251,7 @@ let TokenService = class TokenService {
                 throw new common_1.UnauthorizedException({ message: 'Invalid client secret' });
             if (!client.redirectUris.includes(redirectUri))
                 throw new common_1.BadRequestException({ message: 'Invalid redirect URI' });
-            const token = accessType === common_2.EAccessType.OFFLINE
+            const token = accessType === common_2.EOAuth2AccessType.OFFLINE
                 ? await (async () => {
                     try {
                         const token = await this.handleFindOneTokenByFields(sid, account._id, client._id, ['_id', 'scope', 'expiredAt']);
@@ -263,16 +263,16 @@ let TokenService = class TokenService {
                 })()
                 : undefined;
             const checkScope = token ? [...scope].sort().every((val, index) => val === [...token.scope].sort()[index]) : undefined;
-            const refreshToken = accessType === common_2.EAccessType.OFFLINE
+            const refreshToken = accessType === common_2.EOAuth2AccessType.OFFLINE
                 ? token
                     ? await Promise.all([
-                        !checkScope ? this.handleUpdateScopeInToken(token._id, scope, false, transaction) : undefined,
-                        this.handleUpdateExpiredInToken(token._id, token.expiredAt, transaction),
+                        !checkScope ? this.handleUpdatEOAuth2ScopeInToken(token._id, scope, false, transaction) : undefined,
+                        this.handleUpdateExpired(token._id, token.expiredAt, transaction),
                     ]).then(() => token)
                     : await this.handleSaveToken(sid, client._id, account._id, scope, contants_1.constants.EXPIRED_REFRESH_TOKEN)
                 : undefined;
             const { accessToken, expiresIn, tokenType } = this.handleCreateAccessToken(client._id, account._id, scope);
-            const id_token = scope.includes(common_2.EScope.OPENID)
+            const id_token = scope.includes(common_2.EOAuth2Scope.OPENID)
                 ? this.handleCreateIDToken(account.email, clientId, contants_1.constants.EXPIRED_ID_TOKEN, account.name, account.firstName, account.lastName, account.picture, accessToken, nonce)
                 : undefined;
             await transaction.commitTransaction();
@@ -299,7 +299,7 @@ let TokenService = class TokenService {
         try {
             const token = await this.handleFindOneToken(refreshToken, ['_id', 'accountId', 'scope', 'expiredAt']);
             const account = await this.accountService.handleFindOneAccount(token.accountId, ['_id', 'name', 'clientId']);
-            await this.handleUpdateExpiredInToken(token._id, token.expiredAt);
+            await this.handleUpdateExpired(token._id, token.expiredAt);
             const client = await this.clientService.handleFindOneClient(clientId, ['clientSecret', 'redirectUris']);
             if (clientSecret !== client.clientSecret)
                 throw new common_1.UnauthorizedException('Invalid client secret');

@@ -23,14 +23,14 @@
 /// <reference types="mongoose/types/virtuals" />
 /// <reference types="mongoose/types/inferschematype" />
 import { HydratedDocument, Types } from 'mongoose';
-import { EScope } from '../../common';
+import { EOAuth2Scope } from '../../common';
 export declare class Client {
     name: string;
     clientSecret: string;
     active: boolean;
     owner: Types.ObjectId;
     editor: Types.ObjectId[];
-    scopes: EScope[];
+    scopes: EOAuth2Scope[];
     picture: string;
     redirectUris: string[];
     privacyPolicy: string;

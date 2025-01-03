@@ -20,10 +20,10 @@ let SessionController = class SessionController {
         this.sessionService = sessionService;
     }
     async getAllSessions() {
-        return this.sessionService.handleFindSessions(100, undefined, ['_id', 'os', 'device', 'browser', 'ip', 'linkedAccountIds', 'expiredAt']);
+        return this.sessionService.handleFindSessions(100, undefined, ['_id', 'os', 'device', 'browser', 'ip', 'linkedAccountIds', 'expiredAt', 'createdAt', 'updatedAt']);
     }
     async getSession(id) {
-        return this.sessionService.handleFindOneSession(id, ['_id', 'os', 'device', 'browser', 'ip', 'linkedAccountIds', 'expiredAt'], ['email', 'name', 'picture']);
+        return this.sessionService.handleFindOneSession(id, ['_id', 'os', 'device', 'browser', 'ip', 'linkedAccountIds', 'expiredAt', 'createdAt', 'updatedAt']);
     }
     deleteSession(id) {
         return this.sessionService.handleDeleteSession(id);

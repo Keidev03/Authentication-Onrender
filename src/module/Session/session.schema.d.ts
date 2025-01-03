@@ -23,6 +23,7 @@
 /// <reference types="mongoose/types/virtuals" />
 /// <reference types="mongoose/types/inferschematype" />
 import { HydratedDocument, Types } from 'mongoose';
+import { EAuthState } from '../../common';
 export declare class Session {
     _id: string;
     os: string;
@@ -32,7 +33,7 @@ export declare class Session {
     linkedAccountIds: {
         _id: Types.ObjectId;
         primary: boolean;
-        signedOut: boolean;
+        state: EAuthState;
     }[];
     expiredAt: Date;
 }

@@ -24,10 +24,36 @@ let ClientController = class ClientController {
         this.clientService = clientService;
     }
     async getAllClients() {
-        return this.clientService.handleFindClients(1, 100, ['name', 'clientSecret', 'owner', 'editor', 'scopes', 'active', 'redirectUris']);
+        return this.clientService.handleFindClients(1, 100, [
+            'name',
+            'clientSecret',
+            'active',
+            'owner',
+            'editor',
+            'scopes',
+            'picture',
+            'redirectUris',
+            'privacyPolicy',
+            'termsOfService',
+            'createdAt',
+            'updateAt',
+        ]);
     }
     async getClient(id) {
-        return this.clientService.handleFindOneClient(id, ['name', 'clientSecret', 'owner', 'editor', 'scopes', 'active', 'redirectUris']);
+        return this.clientService.handleFindOneClient(id, [
+            'name',
+            'clientSecret',
+            'active',
+            'owner',
+            'editor',
+            'scopes',
+            'picture',
+            'redirectUris',
+            'privacyPolicy',
+            'termsOfService',
+            'createdAt',
+            'updateAt',
+        ]);
     }
     async postClient(body) {
         const accountId = new mongoose_1.Types.ObjectId();

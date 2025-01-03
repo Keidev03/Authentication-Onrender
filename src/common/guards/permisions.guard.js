@@ -12,7 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.PermissionsGuard = void 0;
 const common_1 = require("@nestjs/common");
 const core_1 = require("@nestjs/core");
-const roles_enum_1 = require("../enums/roles.enum");
+const accessControlList_1 = require("../variables/accessControlList");
 let PermissionsGuard = class PermissionsGuard {
     constructor(reflector) {
         this.reflector = reflector;
@@ -22,7 +22,7 @@ let PermissionsGuard = class PermissionsGuard {
         const permissions = this.reflector.getAllAndOverride('permissions', [context.getHandler(), context.getClass()]);
         if (!permissions || permissions.length === 0)
             return true;
-        const userPermissions = user.roles.flatMap((role) => roles_enum_1.RolePermissions[role] || []);
+        const userPermissions = user.roles.flatMap((role) => accessControlList_1.AccessControlList[role] || []);
         return permissions.every((permission) => userPermissions.includes(permission));
     }
 };

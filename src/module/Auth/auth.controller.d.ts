@@ -1,26 +1,26 @@
 import { Response } from 'express';
 import { IUserAgentInfo, CryptoService } from '../../common';
-import { DAuthBodyPassword, DAuthBodySession, DAuthQuery, DAuthIdentifier } from './dto';
+import { DAuthBodyPassword, DAuthBodySession, DAuthQuery, DAuthIdentifier, DAuthSessionInBrowser } from './dto';
 import { AccountService } from '../Account/account.service';
 import { AuthService } from './auth.service';
+import { ConfigService } from '@nestjs/config';
 export declare class AuthController {
     private readonly authService;
     private readonly accountService;
     private readonly cryptoService;
-    constructor(authService: AuthService, accountService: AccountService, cryptoService: CryptoService);
+    private readonly configService;
+    constructor(authService: AuthService, accountService: AccountService, cryptoService: CryptoService, configService: ConfigService);
     getIdentifier(query: DAuthIdentifier, useragent: IUserAgentInfo): Promise<{
-        TL: string;
-        email?: undefined;
-        name?: undefined;
-        picture?: undefined;
+        TL?: string;
+        status?: string;
+        email?: string;
     } | {
         email: string;
         name: string;
         picture: string;
-        TL?: undefined;
     }>;
-    getAccountsSID(sidStr: string): Promise<any>;
-    removeAccountSIDClient(authuser: number, sidStr: string): Promise<{
+    getAccountinSession(query: DAuthSessionInBrowser, sidStr: string, apiSidStr: string, response: Response): Promise<Response<any, Record<string, any>>>;
+    removeAccountinSession(authuser: number, sidStr: string): Promise<{
         accounts: import("../Session/session.schema").SessionDocument;
     }>;
     postOAuth2SigninSession(query: DAuthQuery, body: DAuthBodySession, sidStr: string): Promise<{

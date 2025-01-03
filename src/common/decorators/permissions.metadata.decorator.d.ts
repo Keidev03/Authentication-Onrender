@@ -1,2 +1,2 @@
-import { EPermissions } from '../enums/permission.enum';
-export declare const Permissions: (...permissions: EPermissions[]) => import("@nestjs/common").CustomDecorator<string>;
+import { EAccountPermissions } from '../enums/account/permission.account.enum';
+export declare const Permissions: (...permissions: EAccountPermissions[]) => import("@nestjs/common").CustomDecorator<string>;

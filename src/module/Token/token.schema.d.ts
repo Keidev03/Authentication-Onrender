@@ -23,13 +23,13 @@
 /// <reference types="mongoose/types/virtuals" />
 /// <reference types="mongoose/types/inferschematype" />
 import { HydratedDocument, Types } from 'mongoose';
-import { EScope } from '../../common';
+import { EOAuth2Scope } from '../../common';
 export declare class Token {
     _id: string;
     sid: string;
     clientId: Types.ObjectId;
     accountId: Types.ObjectId;
-    scope: EScope[];
+    scope: EOAuth2Scope[];
     expiredAt: Date;
 }
 export type TokenDocument = HydratedDocument<Token> & {

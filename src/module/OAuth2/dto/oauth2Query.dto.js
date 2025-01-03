@@ -33,7 +33,7 @@ __decorate([
             .map((responseType) => responseType.trim().toLowerCase())
             .filter(Boolean);
         const data = responseTypes.map((responseType) => {
-            if (Object.values(common_1.EResponseType).includes(responseType)) {
+            if (Object.values(common_1.EOAuth2ResponseType).includes(responseType)) {
                 return responseType;
             }
             throw new Error(`Invalid responseType: ${responseType}`);
@@ -42,7 +42,7 @@ __decorate([
     }, { toClassOnly: true }),
     (0, class_validator_1.IsArray)({ message: 'The "response_type" parameter is required and must be an array' }),
     (0, class_validator_1.ArrayNotEmpty)({ message: 'The "response_type" parameter cannot be empty' }),
-    (0, class_validator_1.IsEnum)(common_1.EResponseType, { each: true, message: 'Each value in "response_type" must be a valid EResponseType' }),
+    (0, class_validator_1.IsEnum)(common_1.EOAuth2ResponseType, { each: true, message: 'Each value in "response_type" must be a valid EOAuth2ResponseType' }),
     __metadata("design:type", Array)
 ], DOAuth2Query.prototype, "responseType", void 0);
 __decorate([
@@ -52,7 +52,7 @@ __decorate([
             .map((scope) => scope.trim().toLowerCase())
             .filter(Boolean);
         const data = scopes.map((scope) => {
-            if (Object.values(common_1.EScope).includes(scope)) {
+            if (Object.values(common_1.EOAuth2Scope).includes(scope)) {
                 return scope;
             }
             throw new Error(`Invalid scope: ${scope}`);
@@ -61,16 +61,16 @@ __decorate([
     }, { toClassOnly: true }),
     (0, class_validator_1.IsArray)({ message: 'The "scope" parameter is required and must be an array' }),
     (0, class_validator_1.ArrayNotEmpty)({ message: 'The "scope" parameter cannot be empty' }),
-    (0, class_validator_1.IsEnum)(common_1.EScope, { each: true, message: 'Each value in "scope" must be a valid EScope' }),
+    (0, class_validator_1.IsEnum)(common_1.EOAuth2Scope, { each: true, message: 'Each value in "scope" must be a valid EOAuth2Scope' }),
     __metadata("design:type", Array)
 ], DOAuth2Query.prototype, "scope", void 0);
 __decorate([
-    (0, class_validator_1.IsEnum)(common_1.EResponseMode, { message: 'The "response_mode" parameter is required and must be a valid EResponseMode' }),
+    (0, class_validator_1.IsEnum)(common_1.EOAuth2ResponseMode, { message: 'The "response_mode" parameter is required and must be a valid EOAuth2ResponseMode' }),
     __metadata("design:type", String)
 ], DOAuth2Query.prototype, "responseMode", void 0);
 __decorate([
     (0, class_validator_1.IsString)({ message: 'The "prompt" parameter is required and must be a valid string' }),
-    (0, class_validator_1.IsEnum)(common_1.EPrompt, { message: 'The "prompt" parameter must be a valid EPrompt' }),
+    (0, class_validator_1.IsEnum)(common_1.EOAuth2Prompt, { message: 'The "prompt" parameter must be a valid EOAuth2Prompt' }),
     __metadata("design:type", String)
 ], DOAuth2Query.prototype, "prompt", void 0);
 __decorate([
@@ -79,7 +79,7 @@ __decorate([
 ], DOAuth2Query.prototype, "state", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsEnum)(common_1.EAccessType, { message: 'The "access_type" parameter must be a valid EAccessType, if provided' }),
+    (0, class_validator_1.IsEnum)(common_1.EOAuth2AccessType, { message: 'The "access_type" parameter must be a valid EOAuth2AccessType, if provided' }),
     __metadata("design:type", String)
 ], DOAuth2Query.prototype, "accessType", void 0);
 __decorate([

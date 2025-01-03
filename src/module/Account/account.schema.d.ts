@@ -23,22 +23,26 @@
 /// <reference types="mongoose/types/virtuals" />
 /// <reference types="mongoose/types/inferschematype" />
 import { HydratedDocument, Types } from 'mongoose';
-import { ERoles } from '../../common';
+import { EAccountState, EAccountProcessing, EAccountVerification, EAccountRoles, EAccountLanguage } from '../../common';
+import { EAccountLocation } from 'src/common/enums/account/location.account.enum';
 export declare class Account {
     email: string;
     firstName: string;
     lastName: string;
     name: string;
     password: string;
-    roles: ERoles[];
-    verified: boolean;
+    roles: EAccountRoles[];
     dateOfBirth: Date;
     gender: string;
     phone: string;
     address: string;
-    location: string;
+    location: EAccountLocation;
+    language: EAccountLanguage;
     picture: string;
     clientId: Types.ObjectId[];
+    state: EAccountState;
+    verification: EAccountVerification;
+    processing: EAccountProcessing;
     expiredAt: Date;
 }
 export type AccountDocument = HydratedDocument<Account> & {

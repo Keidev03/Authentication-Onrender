@@ -1,7 +1,7 @@
-import { EScope } from '../../../common';
+import { EOAuth2Scope } from '../../../common';
 export declare class DClientBodyPost {
     name: string;
-    scopes: EScope[];
+    scopes: EOAuth2Scope[];
     redirect_uris: string;
     failed_uris: string;
 }

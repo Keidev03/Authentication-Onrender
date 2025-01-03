@@ -133,7 +133,7 @@ let ClientService = class ClientService {
         if (!result.acknowledged)
             throw new common_1.NotFoundException('Client not found');
     }
-    async handleUpdateScopes(clientId, scopes, action) {
+    async handleUpdatEOAuth2Scopes(clientId, scopes, action) {
         const update = action === 'add' ? { $addToSet: { scopes: { $each: scopes } } } : { $pull: { scopes: { $in: scopes } } };
         const result = await this.clientModel.updateOne({ _id: clientId }, update).exec();
         if (!result.acknowledged)

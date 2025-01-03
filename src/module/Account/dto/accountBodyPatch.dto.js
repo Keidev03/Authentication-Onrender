@@ -9,10 +9,12 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.DAccountBodyPatch = void 0;
+exports.IsPhoneNumber = exports.DAccountBodyPatch = void 0;
 const class_transformer_1 = require("class-transformer");
 const class_validator_1 = require("class-validator");
+const libphonenumber_js_1 = require("libphonenumber-js");
 const common_1 = require("../../../common");
+const location_account_enum_1 = require("../../../common/enums/account/location.account.enum");
 class DAccountBodyPatch {
 }
 exports.DAccountBodyPatch = DAccountBodyPatch;
@@ -50,19 +52,13 @@ __decorate([
 ], DAccountBodyPatch.prototype, "newPassword", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
-    (0, class_transformer_1.Transform)(({ value }) => value === 'true'),
-    (0, class_validator_1.IsBoolean)(),
-    __metadata("design:type", Boolean)
-], DAccountBodyPatch.prototype, "keepSignedIn", void 0);
-__decorate([
-    (0, class_validator_1.IsOptional)(),
     (0, class_transformer_1.Transform)(({ value }) => {
         const roles = value
             .split(/[\s,]+/)
             .map((role) => role.trim().toLowerCase())
             .filter(Boolean);
         const data = roles.map((role) => {
-            if (Object.values(common_1.ERoles).includes(role)) {
+            if (Object.values(common_1.EOAuth2Scope).includes(role)) {
                 return roles;
             }
             throw new Error(`Invalid role: ${role}`);
@@ -71,14 +67,9 @@ __decorate([
     }, { toClassOnly: true }),
     (0, class_validator_1.IsArray)({ message: 'The "roles" parameter is required and must be an array' }),
     (0, class_validator_1.ArrayNotEmpty)({ message: 'The "roles" parameter cannot be empty' }),
-    (0, class_validator_1.IsEnum)(common_1.ERoles, { each: true, message: 'Each value in "roles" must be a valid ERoles' }),
+    (0, class_validator_1.IsEnum)(common_1.EOAuth2Scope, { each: true, message: 'Each value in "roles" must be a valid EOAuth2Scope' }),
     __metadata("design:type", Array)
 ], DAccountBodyPatch.prototype, "roles", void 0);
-__decorate([
-    (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsBoolean)(),
-    __metadata("design:type", Boolean)
-], DAccountBodyPatch.prototype, "verified", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_transformer_1.Transform)(({ value }) => new Date(value)),
@@ -93,6 +84,7 @@ __decorate([
 __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
+    IsPhoneNumber({ message: 'Invalid international phone number format' }),
     __metadata("design:type", String)
 ], DAccountBodyPatch.prototype, "phone", void 0);
 __decorate([
@@ -102,9 +94,77 @@ __decorate([
 ], DAccountBodyPatch.prototype, "address", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsEnum)(location_account_enum_1.EAccountLocation),
+    __metadata("design:type", String)
+], DAccountBodyPatch.prototype, "location", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsEnum)(common_1.EAccountLanguage),
+    __metadata("design:type", String)
+], DAccountBodyPatch.prototype, "language", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsMongoId)(),
     (0, class_validator_1.IsArray)({ message: 'The "roles" parameter is required and must be an array' }),
     (0, class_validator_1.ArrayNotEmpty)({ message: 'The "roles" parameter cannot be empty' }),
     __metadata("design:type", Array)
 ], DAccountBodyPatch.prototype, "clientId", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsEnum)(common_1.EAccountState),
+    __metadata("design:type", String)
+], DAccountBodyPatch.prototype, "state", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsEnum)(common_1.EAccountVerification),
+    __metadata("design:type", String)
+], DAccountBodyPatch.prototype, "verification", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsEnum)(common_1.EAccountProcessing),
+    __metadata("design:type", String)
+], DAccountBodyPatch.prototype, "processing", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsDate)(),
+    __metadata("design:type", Date)
+], DAccountBodyPatch.prototype, "expiredAt", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_transformer_1.Transform)(({ value }) => value === 'true'),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], DAccountBodyPatch.prototype, "keepSignedIn", void 0);
+function IsPhoneNumber(validationOptions) {
+    return function (object, propertyName) {
+        (0, class_validator_1.registerDecorator)({
+            name: 'isPhoneNumber',
+            target: object.constructor,
+            propertyName: propertyName,
+            options: validationOptions,
+            validator: {
+                validate(value, args) {
+                    if (typeof value !== 'string')
+                        return false;
+                    try {
+                        const phoneNumber = (0, libphonenumber_js_1.default)(value);
+                        return phoneNumber?.isValid() || false;
+                    }
+                    catch {
+                        return false;
+                    }
+                },
+                defaultMessage() {
+                    return 'Invalid phone number';
+                },
+            },
+        });
+    };
+}
+exports.IsPhoneNumber = IsPhoneNumber;
 //# sourceMappingURL=accountBodyPatch.dto.js.map

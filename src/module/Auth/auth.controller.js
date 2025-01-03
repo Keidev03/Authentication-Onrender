@@ -19,18 +19,17 @@ const common_2 = require("../../common");
 const dto_1 = require("./dto");
 const account_service_1 = require("../Account/account.service");
 const auth_service_1 = require("./auth.service");
+const config_1 = require("@nestjs/config");
 let AuthController = class AuthController {
-    constructor(authService, accountService, cryptoService) {
+    constructor(authService, accountService, cryptoService, configService) {
         this.authService = authService;
         this.accountService = accountService;
         this.cryptoService = cryptoService;
+        this.configService = configService;
     }
     async getIdentifier(query, useragent) {
         if (query.email) {
-            const TLEncrypt = await this.authService.handleIdentifier(query.email, useragent);
-            if (!TLEncrypt)
-                throw new common_1.NotFoundException({ message: "Can't find your Google account" });
-            return { TL: TLEncrypt };
+            return this.authService.handleIdentifier(query.email, query.purpose, useragent);
         }
         if (query.TL) {
             const { os, device, browser, ip } = useragent;
@@ -48,12 +47,19 @@ let AuthController = class AuthController {
         }
         throw new common_1.BadRequestException({ message: 'Missing required query parameter: email or TL' });
     }
-    async getAccountsSID(sidStr) {
-        const accounts = await this.authService.handleGetAccountsSID(sidStr);
-        return accounts;
+    async getAccountinSession(query, sidStr, apiSidStr, response) {
+        const { accounts, newAPISID } = await this.authService.handleGetAccountinSession(sidStr, query.authuser, apiSidStr);
+        const cookieOptions = {
+            ...(this.configService.get('BUN_ENV') === 'PRODUCTION' && { domain: this.configService.get('COOKIE_DOMAIN') }),
+            maxAge: common_2.constants.EXPIRED_SID * 1000,
+            httpOnly: true,
+            path: '/',
+        };
+        newAPISID && response.cookie('APISID', newAPISID, cookieOptions);
+        return response.json(accounts);
     }
-    async removeAccountSIDClient(authuser, sidStr) {
-        const accounts = await this.authService.handleRemoveAccountInSession(authuser, sidStr);
+    async removeAccountinSession(authuser, sidStr) {
+        const accounts = await this.authService.handleRemoveAccountinSession(authuser, sidStr);
         return { accounts };
     }
     async postOAuth2SigninSession(query, body, sidStr) {
@@ -65,7 +71,13 @@ let AuthController = class AuthController {
         if (!TLDecrypt || useragent.browser !== TLDecrypt.browser || useragent.device !== TLDecrypt.device || useragent.os !== TLDecrypt.os || useragent.ip !== TLDecrypt.ip)
             throw new common_1.BadRequestException('Detected');
         const { newSID } = await this.authService.handleSigninWithPassword(TLDecrypt.accountId, body.password, TLDecrypt.os, TLDecrypt.device, TLDecrypt.browser, TLDecrypt.ip, sidStr);
-        response.cookie('SID', newSID, { maxAge: common_2.constants.EXPIRED_SID * 1000, httpOnly: true, path: '/' });
+        const cookieOptions = {
+            ...(this.configService.get('BUN_ENV') === 'PRODUCTION' && { domain: this.configService.get('COOKIE_DOMAIN') }),
+            maxAge: common_2.constants.EXPIRED_SID * 1000,
+            httpOnly: true,
+            path: '/',
+        };
+        response.cookie('SID', newSID, cookieOptions);
         return response.json({ uri: query.continue });
     }
     async getSignoutOfAllAccounts(sidStr) {
@@ -82,24 +94,27 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "getIdentifier", null);
 __decorate([
-    (0, common_1.Get)('accounts'),
+    (0, common_1.Get)('session/accounts'),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
-    __param(0, (0, common_2.Cookies)('SID')),
+    __param(0, (0, common_1.Query)()),
+    __param(1, (0, common_2.Cookies)('SID')),
+    __param(2, (0, common_2.Cookies)('APISID')),
+    __param(3, (0, common_1.Res)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
+    __metadata("design:paramtypes", [dto_1.DAuthSessionInBrowser, String, String, Object]),
     __metadata("design:returntype", Promise)
-], AuthController.prototype, "getAccountsSID", null);
+], AuthController.prototype, "getAccountinSession", null);
 __decorate([
-    (0, common_1.Delete)('accounts/:id'),
+    (0, common_1.Delete)('session/accounts/:id'),
     (0, common_1.HttpCode)(common_1.HttpStatus.ACCEPTED),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_2.Cookies)('SID')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Number, String]),
     __metadata("design:returntype", Promise)
-], AuthController.prototype, "removeAccountSIDClient", null);
+], AuthController.prototype, "removeAccountinSession", null);
 __decorate([
-    (0, common_1.Post)('signin/session'),
+    (0, common_1.Post)('session/signin/sid'),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
     __param(0, (0, common_1.Query)()),
     __param(1, (0, common_1.Body)()),
@@ -110,7 +125,7 @@ __decorate([
 ], AuthController.prototype, "postOAuth2SigninSession", null);
 __decorate([
     (0, throttler_1.Throttle)({ default: { limit: 1, ttl: 5000 } }),
-    (0, common_1.Post)('signin/password'),
+    (0, common_1.Post)('session/signin/pwd'),
     __param(0, (0, common_1.Query)()),
     __param(1, (0, common_1.Body)()),
     __param(2, (0, common_2.Cookies)('SID')),
@@ -122,7 +137,7 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "postOAuth2SigninPassword", null);
 __decorate([
-    (0, common_1.Get)('accounts/signout'),
+    (0, common_1.Get)('session/signout'),
     (0, common_1.HttpCode)(common_1.HttpStatus.ACCEPTED),
     __param(0, (0, common_2.Cookies)('SID')),
     __metadata("design:type", Function),
@@ -133,6 +148,7 @@ exports.AuthController = AuthController = __decorate([
     (0, common_1.Controller)('auth'),
     __metadata("design:paramtypes", [auth_service_1.AuthService,
         account_service_1.AccountService,
-        common_2.CryptoService])
+        common_2.CryptoService,
+        config_1.ConfigService])
 ], AuthController);
 //# sourceMappingURL=auth.controller.js.map

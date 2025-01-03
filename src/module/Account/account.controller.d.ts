@@ -19,8 +19,7 @@ export declare class AccountController {
         firstName: string;
         lastName: string;
         picture: string;
-        roles: import("../../common").ERoles[];
-        verified: boolean;
+        roles: import("../../common").EAccountRoles[];
         gender: string;
         dateOfBirth: Date;
     }>;

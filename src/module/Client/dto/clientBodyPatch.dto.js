@@ -40,7 +40,7 @@ __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsArray)(),
     (0, class_validator_1.ArrayNotEmpty)(),
-    (0, class_validator_1.IsEnum)(common_1.EScope, { each: true }),
+    (0, class_validator_1.IsEnum)(common_1.EOAuth2Scope, { each: true }),
     __metadata("design:type", Array)
 ], DClientBodyPatch.prototype, "scopes", void 0);
 __decorate([

@@ -15,33 +15,65 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AccountController = void 0;
 const common_1 = require("@nestjs/common");
 const platform_express_1 = require("@nestjs/platform-express");
+const mongoose_1 = require("@nestjs/mongoose");
+const mongoose_2 = require("mongoose");
 const common_2 = require("../../common");
-const mongoose_1 = require("mongoose");
 const dto_1 = require("./dto");
 const account_service_1 = require("./account.service");
-const mongoose_2 = require("@nestjs/mongoose");
 let AccountController = class AccountController {
     constructor(accountService, connection) {
         this.accountService = accountService;
         this.connection = connection;
     }
     async getAllAccounts() {
-        return this.accountService.handleFindAccounts(1, 100, ['_id', 'email', 'name', 'firstName', 'lastName', 'password', 'picture', 'roles', 'verified', 'gender', 'dateOfBirth', 'clientId']);
+        return this.accountService.handleFindAccounts(1, 100, [
+            '_id',
+            'email',
+            'firstName',
+            'lastName',
+            'name',
+            'password',
+            'roles',
+            'dateOfBirth',
+            'gender',
+            'phone',
+            'address',
+            'location',
+            'language',
+            'picture',
+            'clientId',
+            'state',
+            'verification',
+            'processing',
+            'expiredAt',
+            'createdAt',
+            'updatedAt',
+        ]);
     }
     async getAccount() {
-        const _id = new mongoose_1.Types.ObjectId();
+        const _id = new mongoose_2.Types.ObjectId();
         const userProfile = await this.accountService.handleFindOneAccount(_id, [
             '_id',
             'email',
-            'name',
             'firstName',
             'lastName',
-            'picture',
+            'name',
+            'password',
             'roles',
-            'verified',
-            'gender',
             'dateOfBirth',
+            'gender',
+            'phone',
+            'address',
+            'location',
+            'language',
+            'picture',
             'clientId',
+            'state',
+            'verification',
+            'processing',
+            'expiredAt',
+            'createdAt',
+            'updatedAt',
         ]);
         const picture = userProfile.picture
             ? userProfile.picture.includes('https://lh3.googleusercontent.com')
@@ -55,22 +87,41 @@ let AccountController = class AccountController {
             lastName: userProfile.lastName,
             picture: picture,
             roles: userProfile.roles,
-            verified: userProfile.verified,
             gender: userProfile.gender,
             dateOfBirth: userProfile.dateOfBirth,
         };
     }
     async patchAccount(body, picture) {
-        const _id = new mongoose_1.Types.ObjectId('64a2b1f4c8e1e6a4f2a1d3b5');
-        const { email, firstName, lastName, name, oldPassword, newPassword, keepSignedIn, roles, verified, dateOfBirth, gender, phone, address, clientId } = body;
-        return this.accountService.handleUpdateAccount(_id, { email, firstName, lastName, name, oldPassword, newPassword, keepSignedIn, roles, verified, dateOfBirth, gender, phone, address, clientId }, picture, true);
+        const _id = new mongoose_2.Types.ObjectId('64a2b1f4c8e1e6a4f2a1d3b5');
+        const { email, firstName, lastName, name, oldPassword, newPassword, roles, dateOfBirth, gender, phone, address, location, language, clientId, state, verification, processing, expiredAt, keepSignedIn, } = body;
+        return this.accountService.handleUpdateAccount(_id, {
+            email,
+            firstName,
+            lastName,
+            name,
+            oldPassword,
+            newPassword,
+            roles,
+            dateOfBirth,
+            gender,
+            phone,
+            address,
+            location,
+            language,
+            clientId,
+            state,
+            verification,
+            processing,
+            expiredAt,
+            keepSignedIn,
+        }, picture, true);
     }
     async deleteAccount() {
-        const _id = new mongoose_1.Types.ObjectId();
+        const _id = new mongoose_2.Types.ObjectId();
         await this.accountService.handleDeleteAccount(_id);
     }
     async postAccount(data) {
-        await this.accountService.handleSaveAccount(data.email, data.firstName, data.lastName, data.name, data.dateOfBirth, data.gender, data.password, data.phone);
+        await this.accountService.handleSaveAccount(data.email, data.firstName, data.lastName, data.name, data.dateOfBirth, data.gender, data.password);
     }
     async getResetPassword(email) {
         if (!email)
@@ -97,7 +148,7 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], AccountController.prototype, "getAccount", null);
 __decorate([
-    (0, common_1.Patch)('update'),
+    (0, common_1.Patch)(),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
     (0, common_1.UseInterceptors)((0, platform_express_1.FileInterceptor)('picture')),
     __param(0, (0, common_1.Body)()),
@@ -119,14 +170,14 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], AccountController.prototype, "patchAccount", null);
 __decorate([
-    (0, common_1.Delete)('delete'),
+    (0, common_1.Delete)(),
     (0, common_1.HttpCode)(common_1.HttpStatus.NO_CONTENT),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", Promise)
 ], AccountController.prototype, "deleteAccount", null);
 __decorate([
-    (0, common_1.Post)('create'),
+    (0, common_1.Post)(),
     (0, common_1.HttpCode)(common_1.HttpStatus.CREATED),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -142,7 +193,7 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], AccountController.prototype, "getResetPassword", null);
 __decorate([
-    (0, common_1.Post)('accounts/revoke'),
+    (0, common_1.Post)('revoke'),
     (0, common_1.HttpCode)(common_1.HttpStatus.NO_CONTENT),
     __param(0, (0, common_1.Body)()),
     __param(1, (0, common_2.Cookies)('SID')),
@@ -152,8 +203,8 @@ __decorate([
 ], AccountController.prototype, "getRevokeAccount", null);
 exports.AccountController = AccountController = __decorate([
     (0, common_1.Controller)('account'),
-    __param(1, (0, mongoose_2.InjectConnection)()),
+    __param(1, (0, mongoose_1.InjectConnection)()),
     __metadata("design:paramtypes", [account_service_1.AccountService,
-        mongoose_1.Connection])
+        mongoose_2.Connection])
 ], AccountController);
 //# sourceMappingURL=account.controller.js.map

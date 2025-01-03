@@ -15,23 +15,23 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.TokenController = void 0;
 const common_1 = require("@nestjs/common");
 const token_service_1 = require("./token.service");
-const getAccessToken_dto_1 = require("./dto/getAccessToken.dto");
+const tokenOAuth2Query_1 = require("./dto/tokenOAuth2Query");
 const common_2 = require("../../common");
 let TokenController = class TokenController {
     constructor(tokenService) {
         this.tokenService = tokenService;
     }
     async getAccessToken(body) {
-        const data = body.grant_type === common_2.EGrantType.AUTHORIZATION_CODE
-            ? this.tokenService.handleGetAccessTokenByAuthorizationCodeGrant(body.client_id, body.client_secret, body.code, body.redirect_uri)
-            : this.tokenService.handleGetAccessTokenByRefreshTokenGrant(body.client_id, body.client_secret, body.refresh_token, body.redirect_uri);
+        const data = body.grantType === common_2.EOAuth2GrantType.AUTHORIZATION_CODE
+            ? this.tokenService.handleGetAccessTokenByAuthorizationCodeGrant(body.clientId, body.clientSecret, body.code, body.redirectUri)
+            : this.tokenService.handleGetAccessTokenByRefreshTokenGrant(body.clientId, body.clientSecret, body.refreshToken, body.redirectUri);
         return data;
     }
     async getAllTokens() {
-        return this.tokenService.handleFindTokens(100, undefined, ['_id', 'sid', 'accountId', 'clientId', 'scope', 'expiredAt']);
+        return this.tokenService.handleFindTokens(100, undefined, ['_id', 'sid', 'clientId', 'accountId', 'scope', 'expiredAt', 'createdAt', 'updatedAt']);
     }
     async getToken(id) {
-        return this.tokenService.handleFindOneToken(id, ['_id', 'sid', 'accountId', 'clientId', 'scope', 'expiredAt']);
+        return this.tokenService.handleFindOneToken(id, ['_id', 'sid', 'clientId', 'accountId', 'scope', 'expiredAt', 'createdAt', 'updatedAt']);
     }
     async deleteToken(id) {
         return this.tokenService.handleDeleteToken(id);
@@ -44,7 +44,7 @@ __decorate([
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [getAccessToken_dto_1.DGetAccessToken]),
+    __metadata("design:paramtypes", [tokenOAuth2Query_1.DTokenOAuth2Query]),
     __metadata("design:returntype", Promise)
 ], TokenController.prototype, "getAccessToken", null);
 __decorate([

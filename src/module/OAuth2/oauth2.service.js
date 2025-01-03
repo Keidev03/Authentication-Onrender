@@ -40,7 +40,7 @@ let OAuth2Service = class OAuth2Service {
         try {
             if (!sidStr)
                 throw new common_1.BadRequestException({ message: 'No account found in session' });
-            const accountId = await this.sessionService.hanldeFindOneAccountInSession(authuser, sidStr);
+            const accountId = await this.sessionService.hanldeFindOneAccountInSessionByAuthUser(authuser, sidStr);
             const account = await this.accountService.handleFindOneAccount(accountId, ['_id', 'email', 'name', 'firstName', 'lastName', 'password', 'picture', 'clientId']);
             const client = await this.clientService.handleFindOneClient(clientId, ['_id', 'name', 'picture', 'scopes', 'redirectUris', 'privacyPolicy', 'termsOfService']);
             if (!client) {
@@ -82,9 +82,9 @@ let OAuth2Service = class OAuth2Service {
                     return ![...scope].sort().every((val, index) => val === [...token.scope].sort()[index]);
                 })()
                 : true;
-            const code = responseType.includes(common_2.EResponseType.CODE) ? this.handleCode(sidStr, account._id, scope, accessType, nonce) : undefined;
-            const accessToken = responseType.includes(common_2.EResponseType.TOKEN) ? this.tokenService.handleCreateAccessToken(client._id, account._id, scope) : undefined;
-            const idToken = responseType.includes(common_2.EResponseType.ID_TOKEN) && scope.includes(common_2.EScope.OPENID)
+            const code = responseType.includes(common_2.EOAuth2ResponseType.CODE) ? this.handleCode(sidStr, account._id, scope, accessType, nonce) : undefined;
+            const accessToken = responseType.includes(common_2.EOAuth2ResponseType.TOKEN) ? this.tokenService.handleCreateAccessToken(client._id, account._id, scope) : undefined;
+            const idToken = responseType.includes(common_2.EOAuth2ResponseType.ID_TOKEN) && scope.includes(common_2.EOAuth2Scope.OPENID)
                 ? this.tokenService.handleCreateIDToken(account.email, clientId, contants_1.constants.EXPIRED_ID_TOKEN, account.name, account.firstName, account.lastName, account.picture, accessToken.accessToken, nonce)
                 : undefined;
             await transaction.commitTransaction();
@@ -98,7 +98,7 @@ let OAuth2Service = class OAuth2Service {
                 ...(accessToken && { access_token: accessToken.accessToken, expires_in: accessToken.expiresIn, token_type: accessToken.tokenType }),
                 ...(idToken && { idToken }),
                 scope: scope.join(' '),
-                ...((prompt === common_2.EPrompt.CONSENT || consent) && { consent: { privacyPolicy: client.privacyPolicy, termsOfService: client.termsOfService } }),
+                ...((prompt === common_2.EOAuth2Prompt.CONSENT || consent) && { consent: { privacyPolicy: client.privacyPolicy, termsOfService: client.termsOfService } }),
                 authuser,
             };
         }
@@ -155,9 +155,9 @@ let OAuth2Service = class OAuth2Service {
                     return ![...scope].sort().every((val, index) => val === [...token.scope].sort()[index]);
                 })()
                 : true;
-            const code = responseType.includes(common_2.EResponseType.CODE) ? this.handleCode(session._id, account._id, scope, accessType, nonce) : undefined;
-            const accessToken = responseType.includes(common_2.EResponseType.TOKEN) ? this.tokenService.handleCreateAccessToken(client._id, account._id, scope) : undefined;
-            const idToken = responseType.includes(common_2.EResponseType.ID_TOKEN) && scope.includes(common_2.EScope.OPENID)
+            const code = responseType.includes(common_2.EOAuth2ResponseType.CODE) ? this.handleCode(session._id, account._id, scope, accessType, nonce) : undefined;
+            const accessToken = responseType.includes(common_2.EOAuth2ResponseType.TOKEN) ? this.tokenService.handleCreateAccessToken(client._id, account._id, scope) : undefined;
+            const idToken = responseType.includes(common_2.EOAuth2ResponseType.ID_TOKEN) && scope.includes(common_2.EOAuth2Scope.OPENID)
                 ? this.tokenService.handleCreateIDToken(account.email, clientId, contants_1.constants.EXPIRED_ID_TOKEN, account.name, account.firstName, account.lastName, account.picture, accessToken.accessToken, nonce)
                 : undefined;
             await transaction.commitTransaction();
@@ -172,7 +172,7 @@ let OAuth2Service = class OAuth2Service {
                 ...(accessToken && { access_token: accessToken.accessToken, expires_in: accessToken.expiresIn, token_type: accessToken.tokenType }),
                 ...(idToken && { idToken }),
                 scope: scope.join(' '),
-                ...((prompt === common_2.EPrompt.CONSENT || consent) && { consent: { privacyPolicy: client.privacyPolicy, termsOfService: client.termsOfService } }),
+                ...((prompt === common_2.EOAuth2Prompt.CONSENT || consent) && { consent: { privacyPolicy: client.privacyPolicy, termsOfService: client.termsOfService } }),
                 authuser: indexAuthuser,
             };
         }

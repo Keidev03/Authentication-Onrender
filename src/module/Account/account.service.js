@@ -34,6 +34,24 @@ let AccountService = class AccountService {
         this.connection = connection;
         this.idFolderAvatar = configService.get('DRIVE_ID_FOLDER_AVATAR');
     }
+    handleSaveAccount(email, firstName, lastName, name, dateOfBirth, gender, password) {
+        try {
+            const hash = bcrypt.hashSync(password, 10);
+            const handleCreateUser = new this.accountModel({
+                email,
+                firstName,
+                lastName,
+                name,
+                dateOfBirth,
+                gender,
+                password: hash,
+            });
+            return handleCreateUser.save();
+        }
+        catch (error) {
+            throw new common_1.InternalServerErrorException({ message: 'Error creating account' });
+        }
+    }
     async handleFindAccounts(page, limit, fields) {
         try {
             const query = {};
@@ -60,25 +78,6 @@ let AccountService = class AccountService {
         }
         catch (error) {
             throw new common_1.InternalServerErrorException({ message: 'Failed to retrieve accounts' });
-        }
-    }
-    handleSaveAccount(email, firstName, lastName, name, dateOfBirth, gender, password, phone) {
-        try {
-            const hash = bcrypt.hashSync(password, 10);
-            const handleCreateUser = new this.accountModel({
-                email,
-                firstName,
-                lastName,
-                name,
-                dateOfBirth,
-                gender,
-                phone,
-                password: hash,
-            });
-            return handleCreateUser.save();
-        }
-        catch (error) {
-            throw new common_1.InternalServerErrorException({ message: 'Error creating account' });
         }
     }
     async handleFindOneAccountByEmail(email, fields) {
@@ -132,14 +131,14 @@ let AccountService = class AccountService {
             if (retrieve) {
                 const response = await this.accountModel.findOneAndUpdate({ _id }, updateQuery, { new: true, session: transaction }).exec();
                 if (updateQuery.password && !data.keepSignedIn)
-                    await this.sessionSerivce.handleSetLinkedOneAccountSignOutAllSession(_id, true, transaction);
+                    await this.sessionSerivce.handleSetLinkedOneAccountStateAllSession(_id, common_2.EAuthState.SIGNED_OUT, transaction);
                 await transaction.commitTransaction();
                 return response;
             }
             else {
                 const response = await this.accountModel.updateOne({ _id }, updateQuery, { session: transaction }).exec();
                 if (updateQuery.password && !data.keepSignedIn)
-                    await this.sessionSerivce.handleSetLinkedOneAccountSignOutAllSession(_id, true, transaction);
+                    await this.sessionSerivce.handleSetLinkedOneAccountStateAllSession(_id, common_2.EAuthState.SIGNED_OUT, transaction);
                 if (!response.acknowledged)
                     throw new common_1.NotFoundException('Account not found or could not be updated');
                 await transaction.commitTransaction();
@@ -155,7 +154,7 @@ let AccountService = class AccountService {
             transaction.endSession();
         }
     }
-    async handleUpdateRolesToAccount(accountId, roles, action, session) {
+    async handleUpdatEOAuth2ScopeToAccount(accountId, roles, action, session) {
         const updateQuery = action === 'add' ? { $addToSet: { roles: { $each: roles } } } : { $pull: { roles: { $in: roles } } };
         const response = await this.accountModel.updateOne({ _id: accountId }, updateQuery, { session }).exec();
         if (!response.acknowledged) {
@@ -177,7 +176,7 @@ let AccountService = class AccountService {
             const new_password = (0, generate_password_1.generate)({ length: 8, numbers: true });
             const hashedPassword = bcrypt.hashSync(new_password, 10);
             await this.accountModel.updateOne({ _id: account._id }, { password: hashedPassword }).exec();
-            await this.sessionSerivce.handleSetLinkedOneAccountSignOutAllSession(account._id, true);
+            await this.sessionSerivce.handleSetLinkedOneAccountStateAllSession(account._id, common_2.EAuthState.SIGNED_OUT);
             const htmlFormResetPassword = (0, common_2.FormResetPassword)(new_password);
             this.mailerService.Gmail(email, 'Reset Password', htmlFormResetPassword);
         }
